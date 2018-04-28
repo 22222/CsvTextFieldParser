@@ -1,0 +1,492 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace NotVisualBasic.FileIO
+{
+    /// <summary>
+    /// Parses comma-delimited text files.
+    /// </summary>
+    /// <remarks>
+    /// Based on <see cref="Microsoft.VisualBasic.FileIO.TextFieldParser"/>.
+    /// </remarks>
+    public class CsvTextFieldParser : IDisposable
+    {
+        private TextReader reader;
+        private readonly bool leaveOpen = false;
+        private string peekedLine = null;
+        private long lineNumber = 0;
+
+        private char delimiterChar = ',';
+        private char quoteChar = '"';
+        private char quoteEscapeChar = '"';
+
+        /// <summary>
+        /// Constructs a parser from the specified input stream.
+        /// </summary>
+        public CsvTextFieldParser(Stream stream)
+            : this(new StreamReader(stream)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input stream with the specified encoding. 
+        /// </summary>
+        public CsvTextFieldParser(Stream stream, Encoding encoding)
+            : this(new StreamReader(stream, encoding)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input stream with the specified encoding and byte order mark detection option.
+        /// </summary>
+        public CsvTextFieldParser(Stream stream, Encoding encoding, bool detectEncodingFromByteOrderMarks)
+            : this(new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input stream with the specified encoding and byte order mark detection option, and optionally leaves the stream open.
+        /// </summary>
+        public CsvTextFieldParser(Stream stream, Encoding encoding, bool detectEncodingFromByteOrderMarks, bool leaveOpen)
+            : this(new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks))
+        {
+            this.leaveOpen = leaveOpen;
+        }
+
+        /// <summary>
+        /// Constructs a parser from the specified input file path.
+        /// </summary>
+        public CsvTextFieldParser(string path)
+            : this(new StreamReader(path)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input file path with the specified encoding.
+        /// </summary>
+        public CsvTextFieldParser(string path, Encoding encoding)
+            : this(new StreamReader(path, encoding)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input file path with the specified encoding and byte order mark detection option.
+        /// </summary>
+        public CsvTextFieldParser(string path, Encoding encoding, bool detectEncodingFromByteOrderMarks)
+            : this(new StreamReader(path, encoding, detectEncodingFromByteOrderMarks)) { }
+
+        /// <summary>
+        /// Constructs a parser from the specified input text reader.
+        /// </summary>
+        public CsvTextFieldParser(TextReader reader)
+        {
+            if (reader == null) throw new ArgumentNullException(nameof(reader));
+            this.reader = reader;
+        }
+
+        /// <summary>
+        /// True if there are lines between the current cursor position and the end of the file.
+        /// </summary>
+        public bool EndOfData => !HasNextLine();
+
+        /// <summary>
+        /// Reads all fields on the current line, returns them as an array of strings, and advances the cursor to the next line containing data.
+        /// </summary>
+        /// <returns>An array of strings that contains field values for the current line, or null if <see cref="EndOfData"/> is true.</returns>
+        /// <exception cref="CsvMalformedLineException">if the parse of the current line failed</exception>
+        public string[] ReadFields()
+        {
+            if (reader == null) return null;
+
+            var line = ReadNextLineWithTrailingEol(ignoreEmptyLines: true);
+            if (line == null)
+            {
+                return null;
+            }
+
+            var fields = new List<string>();
+            int startIndex = 0;
+            while (startIndex < line.Length)
+            {
+                int nextStartIndex;
+                fields.Add(ParseField(ref line, startIndex, out nextStartIndex));
+                startIndex = nextStartIndex;
+            }
+
+            // If the last char is the delimiter, then we need to add an extra empty field.
+            if (line.Length == 0 || line[line.Length - 1] == delimiterChar)
+            {
+                fields.Add(string.Empty);
+            }
+
+            return fields.ToArray();
+        }
+
+        private string ParseField(ref string line, int startIndex, out int nextStartIndex)
+        {
+            if (line[startIndex] == quoteChar)
+            {
+                return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex);
+            }
+            if (CompatibilityMode && char.IsWhiteSpace(line[startIndex]))
+            {
+                int leadingWhitespaceCount = line.Skip(startIndex).TakeWhile(ch => char.IsWhiteSpace(ch)).Count();
+                int nonWhitespaceStartIndex = startIndex + leadingWhitespaceCount;
+                if (nonWhitespaceStartIndex < line.Length && line[nonWhitespaceStartIndex] == quoteChar)
+                {
+                    return ParseFieldAfterOpeningQuote(ref line, nonWhitespaceStartIndex + 1, out nextStartIndex);
+                }
+            }
+
+            string field;
+            var delimiterIndex = line.IndexOf(delimiterChar, startIndex);
+            if (delimiterIndex >= 0)
+            {
+                field = line.Substring(startIndex, delimiterIndex - startIndex);
+                nextStartIndex = delimiterIndex + 1;
+            }
+            else
+            {
+                field = line.Substring(startIndex).TrimEnd('\r', '\n');
+                nextStartIndex = line.Length;
+            }
+            return field;
+        }
+
+        private string ParseFieldAfterOpeningQuote(ref string line, int startIndex, out int nextStartIndex)
+        {
+            var sb = new StringBuilder();
+            long currentLineNumber = lineNumber;
+            int i = startIndex;
+            bool isQuoteClosed = false;
+
+            do
+            {
+                while (i < line.Length)
+                {
+                    // If we have the escape char and then a quote (or another escape char),
+                    // then we need to skip the escape char and just add the char it was escaping.
+                    if (line[i] == quoteEscapeChar && i + 1 < line.Length && (line[i + 1] == quoteChar || line[i + 1] == quoteEscapeChar))
+                    {
+                        sb.Append(line[i + 1]);
+                        i += 2;
+                        continue;
+                    }
+
+                    // If we have an (unescaped) quote char, then we're done parsing this field.
+                    if (line[i] == quoteChar)
+                    {
+                        isQuoteClosed = true;
+                        i++;
+                        break;
+                    }
+
+                    sb.Append(line[i]);
+                    i++;
+                }
+
+                // If the quote is still open and we've read through the entire line, then the field value might contain an EOL character.
+                // That means we need to add the next line to our input and continue parsing this field.
+                if (!isQuoteClosed && i >= line.Length)
+                {
+                    // Ignoring empty lines is the wrong thing to do here (we'd be stripping out EOL characters in the middle of a quoted field).
+                    // But that's how the VB version works, so we'll do the same in compatibility mode.
+                    string nextLine = ReadNextLineWithTrailingEol(ignoreEmptyLines: CompatibilityMode);
+                    if (nextLine == null)
+                    {
+                        // If we're out of lines and still haven't found a closing quote, then this whole line is malformed.
+                        throw CreateMalformedLineException(
+                            message: $"Line {currentLineNumber} cannot be parsed because a quoted field is not closed.",
+                            errorLine: line.TrimEnd('\r', '\n'),
+                            errorLineNumber: currentLineNumber
+                        );
+                    }
+                    line += nextLine;
+                }
+            } while (!isQuoteClosed && i < line.Length);
+
+            // A line can be considered malformed if there are extra characters after the closing quote.
+            bool isMalformed;
+            if (isQuoteClosed)
+            {
+                if (i >= line.Length)
+                {
+                    isMalformed = false;
+                }
+                else if (line[i] == delimiterChar)
+                {
+                    isMalformed = false;
+                }
+                else if (line[i] == '\r' || line[i] == '\n')
+                {
+                    // If the field ends in an EOL character, then we need to increment past it
+                    if (line[i] == '\r' && i + 1 < line.Length && line[i + 1] == '\n')
+                    {
+                        i++;
+                    }
+                    i++;
+                    isMalformed = false;
+                }
+                else if (CompatibilityMode && char.IsWhiteSpace(line[i]))
+                {
+                    isMalformed = true;
+
+                    // The VB parser allows extra whitespace after the closing quote.
+                    // And if that happens at the end of the file, this causes an extra blank space to be added.
+                    int nextDelimiterOrEolIndex = line.IndexOfAny(new char[] { delimiterChar, '\r', '\n' }, i);
+                    int remainingFieldLength = (nextDelimiterOrEolIndex >= 0 ? nextDelimiterOrEolIndex : line.Length) - i;
+                    var isAllRemainingWhitespace = string.IsNullOrWhiteSpace(line.Substring(i, remainingFieldLength));
+                    if (isAllRemainingWhitespace)
+                    {
+                        isMalformed = false;
+                        i = nextDelimiterOrEolIndex;
+                        if (i < 0)
+                        {
+                            line += ',';
+                            i = line.Length - 1;
+                        }
+                        else if (line[i] == '\r' || line[i] == '\n')
+                        {
+                            // If the field ends in an EOL character, then we need to increment past it
+                            if (line[i] == '\r' && i + 1 < line.Length && line[i + 1] == '\n')
+                            {
+                                i++;
+                            }
+                            i++;
+                        }
+                    }
+                }
+                else
+                {
+                    isMalformed = true;
+                }
+            }
+            else
+            {
+                isMalformed = true;
+            }
+
+            if (isMalformed)
+            {
+                throw CreateMalformedLineException(
+                    message: $"Line {currentLineNumber} cannot be parsed because of trailing characters after an end quote.",
+                    errorLine: line.TrimEnd('\r', '\n'),
+                    errorLineNumber: currentLineNumber
+                );
+            }
+            nextStartIndex = i + 1;
+            return sb.ToString();
+        }
+
+        private bool HasNextLine()
+        {
+            if (peekedLine != null)
+            {
+                return true;
+            }
+
+            var nextLine = ReadNextLineWithTrailingEol(ignoreEmptyLines: true);
+            if (nextLine == null)
+            {
+                return false;
+            }
+
+            peekedLine = nextLine;
+            return true;
+        }
+
+        private string ReadNextLineWithTrailingEol(bool ignoreEmptyLines)
+        {
+            var line = ReadNextLineOrWhitespaceWithTrailingEol();
+            if (ignoreEmptyLines)
+            {
+                while (line != null && IsLineEmpty(line))
+                {
+                    line = ReadNextLineOrWhitespaceWithTrailingEol();
+                }
+            }
+            return line;
+        }
+
+        private string ReadNextLineOrWhitespaceWithTrailingEol()
+        {
+            if (reader == null) return null;
+
+            if (peekedLine != null)
+            {
+                var temp = peekedLine;
+                peekedLine = null;
+                return temp;
+            }
+
+            var sb = new StringBuilder();
+            while (true)
+            {
+                int ch = reader.Read();
+                if (ch == -1) break;
+
+                sb.Append((char)ch);
+                if (ch == '\r' || ch == '\n')
+                {
+                    if (ch == '\r' && reader.Peek() == '\n')
+                    {
+                        sb.Append((char)reader.Read());
+                    }
+                    break;
+                }
+            }
+
+            if (sb.Length == 0)
+            {
+                return null;
+            }
+
+            var line = sb.ToString();
+            lineNumber++;
+            return line;
+        }
+
+        private bool IsLineEmpty(string line)
+        {
+            if (string.IsNullOrEmpty(line)) return true;
+            if (line.All(ch => ch == '\r' || ch == '\n')) return true;
+            if (CompatibilityMode && string.IsNullOrWhiteSpace(line)) return true;
+            return false;
+            
+        }
+
+        /// <summary>
+        /// Closes the current <see cref="CsvTextFieldParser"/> object.
+        /// </summary>
+        public void Close()
+        {
+            if (reader != null)
+            {
+                if (!leaveOpen)
+                {
+                    reader.Close();
+                }
+                reader = null;
+            }
+
+            if (!CompatibilityMode)
+            {
+                ErrorLine = string.Empty;
+                ErrorLineNumber = -1L;
+            }
+        }
+
+        /// <summary>
+        /// Closes and disposes the current <see cref="CsvTextFieldParser"/> object.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes of the current <see cref="CsvTextFieldParser"/> object. 
+        /// </summary>
+        /// <param name="disposing">true if called from <see cref="Dispose()"/>, or false if called from a finalizer</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Close();
+            }
+        }
+
+        #region Error Handling
+
+        /// <summary>
+        /// The line that caused the most recent <see cref="CsvMalformedLineException"/>.
+        /// </summary>
+        /// <remarks>
+        /// If no <see cref="CsvMalformedLineException"/> exceptions have been thrown, an empty string is returned.
+        /// The <see cref="ErrorLineNumber"/> property can be used to display the number of the line that caused the exception.
+        /// </remarks>
+        public string ErrorLine { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// Returns the number of the line that caused the most recent <see cref="CsvMalformedLineException"/> exception.
+        /// </summary>
+        /// <remarks>
+        /// If no <see cref="CsvMalformedLineException"/> exceptions have been thrown, -1 is returned.
+        /// The <see cref="ErrorLine"/> property can be used to display the number of the line that caused the exception.
+        /// Blank lines and comments are not ignored when determining the line number.
+        /// </remarks>
+        public long ErrorLineNumber { get; private set; } = -1;
+
+        private CsvMalformedLineException CreateMalformedLineException(string message, string errorLine, long errorLineNumber)
+        {
+            ErrorLine = errorLine;
+            ErrorLineNumber = errorLineNumber;
+            return new CsvMalformedLineException(
+                message: message,
+                lineNumber: errorLineNumber
+            );
+        }
+
+        #endregion
+
+        #region Configuration
+
+        /// <summary>
+        /// True if this parser should exactly reproduce the behavior of the <see cref="Microsoft.VisualBasic.FileIO.TextFieldParser"/>.
+        /// Defaults to false.
+        /// </summary>
+        public bool CompatibilityMode { get; set; } = false;
+
+        /// <summary>
+        /// Sets the delimiter character used by this parser.  Default is a comma <code>,</code>.
+        /// </summary>
+        public void SetDelimiter(char delimiterChar) { this.delimiterChar = delimiterChar; }
+
+        /// <summary>
+        /// Sets the quote character used by this parser, and also sets the quote escape character to match if it previously matched.
+        /// Default is a double quote <code>"</code>.
+        /// </summary>
+        public void SetQuoteCharacter(char quoteChar)
+        {
+            // If the quote and escape characters currently match, then make sure they still match after we change the quote character.
+            if (this.quoteChar == this.quoteEscapeChar)
+            {
+                this.quoteEscapeChar = quoteChar;
+            }
+            this.quoteChar = quoteChar;
+        }
+
+        /// <summary>
+        /// Sets the quote escape character used by this parser.  Default is the same as the quote character, a double quote <code>"</code>.
+        /// </summary>
+        public void SetQuoteEscapeCharacter(char quoteEscapeChar) { this.quoteEscapeChar = quoteEscapeChar; }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// An exception that is thrown when the <see cref="CsvTextFieldParser.ReadFields"/> method cannot parse a row using the specified format.
+    /// </summary>
+    /// <remarks>
+    /// Based on <see cref="Microsoft.VisualBasic.FileIO.MalformedLineException.MalformedLineException"/>.
+    /// </remarks>
+    public class CsvMalformedLineException : FormatException
+    {
+        /// <summary>
+        /// Constructs an exception with a specified message and a line number.
+        /// </summary>
+        public CsvMalformedLineException(string message, long lineNumber)
+            : base(message)
+        {
+            LineNumber = lineNumber;
+        }
+
+        /// <summary>
+        /// Constructs an exception with a specified message, a line number, and a reference to the inner exception that is the cause of this exception.
+        /// </summary>
+        public CsvMalformedLineException(string message, long lineNumber, Exception innerException)
+            : base(message, innerException)
+        {
+            LineNumber = lineNumber;
+        }
+
+        /// <summary>
+        /// The line number of the malformed line.
+        /// </summary>
+        public long LineNumber { get; }
+    }
+}

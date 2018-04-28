@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>NotVisualBasic.FileIO</RootNamespace>
+    <Authors>22222</Authors>
+    <Product />
+    <Description>A simple CSV parser based on Microsoft.VisualBasic.FileIO.TextFieldParser.</Description>
+    <PackageProjectUrl>https://github.com/22222/CsvTextFieldParser</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/22222/CsvTextFieldParser/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageTags>csv parser CsvParser CsvTextFieldParser TextFieldParser</PackageTags>
+    <Company />
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.0.0</Version>
+    <AssemblyVersion>0.0.0.0</AssemblyVersion>
+    <FileVersion>0.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <LangVersion>6</LangVersion>
+    <DocumentationFile>bin\Debug\netstandard2.0\CsvTextFieldParser.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\CsvTextFieldParser.xml</DocumentationFile>
+  </PropertyGroup>
+
+</Project>
