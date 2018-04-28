@@ -1,5 +1,7 @@
 A simple CSV parser based on Microsoft.VisualBasic.FileIO.TextFieldParser.
 
+[![Build status](https://ci.appveyor.com/api/projects/status/o13wp50j7iqoxcse?svg=true)](https://ci.appveyor.com/project/22222/csvtextfieldparser)
+
 The goal of this library is to provide a simple alternative to the `TextFieldParser` class in the `Microsoft.VisualBasic` assembly that works with .NET Core, or just that doesn't require you to use a VisualBasic assembly to a C# project.
 
 
@@ -9,7 +11,10 @@ There's just one real file in this library: [CsvTextFieldParser](CsvTextFieldPar
 
 This project is available under either of two licenses: [MIT](LICENSE) or [The Unlicense](UNLICENSE).  If you're able to use the unlicense, then you don't have to provide any attribution at all.  You want to throw this code into your own project and tell everyone you wrote it?  Go for it.
 
-If you'd prefer to have a NuGet package, that might be an option in the future.
+Alternatively, there are a couple more traditional ways to use this library:
+
+* Install the [NuGet package](https://www.nuget.org/packages/CsvTextFieldParser/)
+* Download the assembly from the [latest release](https://github.com/22222/CsvTextFieldParser/releases/latest) and reference it manually
 
 
 Getting Started
