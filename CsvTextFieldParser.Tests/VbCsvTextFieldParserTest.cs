@@ -43,7 +43,32 @@ namespace NotVisualBasic.FileIO
             public string ErrorLine => parser.ErrorLine;
             public long ErrorLineNumber => parser.ErrorLineNumber;
             public void SetDelimiter(char delimiterChar) => parser.SetDelimiters(delimiterChar.ToString());
+            public string[] Delimiters { set => parser.Delimiters = value; }
+            public bool HasFieldsEnclosedInQuotes { set => parser.HasFieldsEnclosedInQuotes = value; }
+            public bool TrimWhiteSpace { set => parser.TrimWhiteSpace = value; }
             public void Dispose() => parser.Dispose();
+        }
+
+        [Test]
+        public void SetDelimiters_Empty()
+        {
+            using (var parser = new TextFieldParser(new StringReader("test")))
+            {
+                parser.Delimiters = new string[0];
+                var actual = parser.Delimiters;
+                Assert.AreEqual(0, actual.Length);
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_Null()
+        {
+            using (var parser = new TextFieldParser(new StringReader("test")))
+            {
+                parser.Delimiters = null;
+                var actual = parser.Delimiters;
+                Assert.IsNull(actual);
+            }
         }
     }
 }

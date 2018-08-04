@@ -11,13 +11,24 @@ namespace NotVisualBasic.FileIO
 {
     public class ComparisonWithVbTextFieldParserTest
     {
-        [TestCase("1234567890,\n", 1000)]
-        [TestCase("1234567890,\n\"", 1000)]
-        [TestCase("2,\n\r\"", 1000)]
-        [TestCase("abcdefgh,\"\n\r\t ", 1000)]
-        [TestCase("a2/\\#,\"'\n\r\t ", 1000)]
-        public void RandomInput(string inputCharsString, int iterations, int seed = 0)
+        [Test]
+        public void RandomInput(
+            [Values(
+                "1234567890,\n",
+                "1234567890,\n\"",
+                "2,\n\r\"",
+                "abcdefgh,\"\n\r\t ",
+                "a2/\\#,\"'\n\r\t "
+            )]
+            string inputCharsString,
+            [Values(true, false)] bool trimWhiteSpace,
+            [Values(true, false)] bool hasFieldsEnclosedInQuotes
+        )
         {
+            // Using a hardcoded seed so our "random" tests are deterministic.
+            const int seed = 0;
+            const int iterations = 1000;
+
             var inputChars = inputCharsString.ToArray();
             var random = new Random(seed);
             for (var i = 0; i < iterations; i++)
@@ -25,8 +36,8 @@ namespace NotVisualBasic.FileIO
                 var inputLength = random.Next(minValue: 1, maxValue: 1000);
                 var input = string.Join(string.Empty, Enumerable.Range(0, inputLength).Select(_ => inputChars[random.Next(0, inputChars.Length)]));
 
-                using (var expectedParser = CreateExpectedParser(input))
-                using (var actualParser = CreateActualParser(input))
+                using (var expectedParser = CreateExpectedParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
+                using (var actualParser = CreateActualParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 {
 
                     bool endOfData;
@@ -78,18 +89,21 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        private TextFieldParser CreateExpectedParser(string input)
+        private TextFieldParser CreateExpectedParser(string input, bool trimWhiteSpace, bool hasFieldsEnclosedInQuotes)
         {
             var parser = new Microsoft.VisualBasic.FileIO.TextFieldParser(new StringReader(input));
             parser.SetDelimiters(",");
-            parser.TrimWhiteSpace = false;
+            parser.TrimWhiteSpace = trimWhiteSpace;
+            parser.HasFieldsEnclosedInQuotes = hasFieldsEnclosedInQuotes;
             return parser;
         }
 
-        private CsvTextFieldParser CreateActualParser(string input)
+        private CsvTextFieldParser CreateActualParser(string input, bool trimWhiteSpace, bool hasFieldsEnclosedInQuotes)
         {
             var parser = new CsvTextFieldParser(new StringReader(input));
             parser.CompatibilityMode = true;
+            parser.TrimWhiteSpace = trimWhiteSpace;
+            parser.HasFieldsEnclosedInQuotes = hasFieldsEnclosedInQuotes;
             return parser;
         }
     }

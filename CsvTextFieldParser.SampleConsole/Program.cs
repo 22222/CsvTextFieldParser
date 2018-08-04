@@ -11,6 +11,23 @@ namespace SampleConsole
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Parse to dictionary:");
+            var csvDictionaries = ParseCsvWithHeader(@"Name,Birth Date
+Apollo Creed,1942-08-17
+Ivan Drago,1961-11-03");
+
+            Console.WriteLine(string.Join(Environment.NewLine, csvDictionaries.Select(csvDictionary => string.Join(",", csvDictionary.Select(kv => $"{kv.Key}={kv.Value}")))));
+            Console.WriteLine();
+
+            Console.WriteLine("Parse to dictionary with error handling:");
+            csvDictionaries = ParseCsvWithHeaderIgnoreErrors(@"Name,Birth Date
+Apollo Creed,1942-08-17
+""broken""line
+Ivan Drago,1961-11-03");
+
+            Console.WriteLine(string.Join(Environment.NewLine, csvDictionaries.Select(csvDictionary => string.Join(",", csvDictionary.Select(kv => $"{kv.Key}={kv.Value}")))));
+            Console.WriteLine();
+
             Console.WriteLine("Basic parser:");
             ProcessCsv(@"Name,Birth Date
 Apollo Creed,1942-08-17
@@ -64,6 +81,77 @@ Drago"",1961-11-03
                     {
                         yield return line.Split(',');
                     }
+                }
+            }
+        }
+
+        public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeader(string csvInput)
+        {
+            using (var csvReader = new StringReader(csvInput))
+            using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
+            {
+                if (parser.EndOfData)
+                {
+                    yield break;
+                }
+                string[] headerFields = parser.ReadFields();
+                while (!parser.EndOfData)
+                {
+                    string[] fields = parser.ReadFields();
+                    int fieldCount = Math.Min(headerFields.Length, fields.Length);
+                    IDictionary<string, string> fieldDictionary = new Dictionary<string, string>(fieldCount);
+                    for (var i = 0; i < fieldCount; i++)
+                    {
+                        string headerField = headerFields[i];
+                        string field = fields[i];
+                        fieldDictionary[headerField] = field;
+                    }
+                    yield return fieldDictionary;
+                }
+            }
+        }
+
+        public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeaderIgnoreErrors(string csvInput)
+        {
+            using (var csvReader = new StringReader(csvInput))
+            using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
+            {
+                if (parser.EndOfData)
+                {
+                    yield break;
+                }
+                string[] headerFields;
+                try
+                {
+                    headerFields = parser.ReadFields();
+                }
+                catch (NotVisualBasic.FileIO.CsvMalformedLineException ex)
+                {
+                    Console.Error.WriteLine($"Failed to parse header line {ex.LineNumber}: {parser.ErrorLine}");
+                    yield break;
+                }
+                while (!parser.EndOfData)
+                {
+                    string[] fields;
+                    try
+                    {
+                        fields = parser.ReadFields();
+                    }
+                    catch (NotVisualBasic.FileIO.CsvMalformedLineException ex)
+                    {
+                        Console.Error.WriteLine($"Failed to parse line {ex.LineNumber}: {parser.ErrorLine}");
+                        continue;
+                    }
+
+                    int fieldCount = Math.Min(headerFields.Length, fields.Length);
+                    IDictionary<string, string> fieldDictionary = new Dictionary<string, string>(fieldCount);
+                    for (var i = 0; i < fieldCount; i++)
+                    {
+                        string headerField = headerFields[i];
+                        string field = fields[i];
+                        fieldDictionary[headerField] = field;
+                    }
+                    yield return fieldDictionary;
                 }
             }
         }
@@ -152,8 +240,11 @@ Drago"",1961-11-03
         {
             var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
             parser.SetDelimiter('|');
+            parser.Delimiters = new[] { "|" };
             parser.SetQuoteCharacter('\'');
             parser.SetQuoteEscapeCharacter('\\');
+            parser.HasFieldsEnclosedInQuotes = false;
+            parser.TrimWhiteSpace = true;
         }
     }
 }

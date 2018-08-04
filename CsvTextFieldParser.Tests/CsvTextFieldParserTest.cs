@@ -22,6 +22,9 @@ namespace NotVisualBasic.FileIO
             bool EndOfData { get; }
             string[] ReadFields();
             void SetDelimiter(char delimiterChar);
+            string[] Delimiters { set; }
+            bool HasFieldsEnclosedInQuotes { set; }
+            bool TrimWhiteSpace { set; }
             string ErrorLine { get; }
             long ErrorLineNumber { get; }
         }
@@ -43,6 +46,9 @@ namespace NotVisualBasic.FileIO
             public string ErrorLine => InnerParser.ErrorLine;
             public long ErrorLineNumber => InnerParser.ErrorLineNumber;
             public void SetDelimiter(char delimiterChar) => InnerParser.SetDelimiter(delimiterChar);
+            public string[] Delimiters { set => InnerParser.Delimiters = value; }
+            public bool HasFieldsEnclosedInQuotes { set => InnerParser.HasFieldsEnclosedInQuotes = value; }
+            public bool TrimWhiteSpace { set => InnerParser.TrimWhiteSpace = value; }
             public void Dispose() => InnerParser.Dispose();
         }
 
@@ -188,10 +194,12 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_Empty()
+        public void ReadFields_Empty([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser(string.Empty))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsTrue(parser.EndOfData);
                 Assert.IsNull(parser.ReadFields());
             }
@@ -213,11 +221,13 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceOnly()
+        public void ReadFields_SpaceOnly([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser(" "))
             {
-                if (!CompatibilityMode)
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                if (!CompatibilityMode && !trimWhiteSpace)
                 {
                     Assert.IsFalse(parser.EndOfData);
                     CollectionAssert.AreEqual(
@@ -231,30 +241,36 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_CrOnly()
+        public void ReadFields_CrOnly([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\r"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsTrue(parser.EndOfData);
                 Assert.IsNull(parser.ReadFields());
             }
         }
 
         [Test]
-        public void ReadFields_LfOnly()
+        public void ReadFields_LfOnly([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\n"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsTrue(parser.EndOfData);
                 Assert.IsNull(parser.ReadFields());
             }
         }
 
         [Test]
-        public void ReadFields_CrlfOnly()
+        public void ReadFields_CrlfOnly([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\r\n"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsTrue(parser.EndOfData);
                 Assert.IsNull(parser.ReadFields());
             }
@@ -290,10 +306,12 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SampleWithQuotedNewlines()
+        public void ReadFields_SampleWithQuotedNewlines([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser($"\"newline{Environment.NewLine}test\",2\nsecond line,3"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
                     expected: new[] { $"newline{Environment.NewLine}test", "2" },
@@ -391,24 +409,46 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_RandomSample_QuotedTwoConsecutiveCr()
+        public void ReadFields_RandomSample_QuotedTwoConsecutiveCr([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"\r\r2,,\"\n"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
-                   expected: CompatibilityMode ? new[] { $"\r2,," } : new[] { $"\r\r2,," },
-                   actual: parser.ReadFields()
-                );
+
+                if (trimWhiteSpace)
+                {
+                    CollectionAssert.AreEqual(
+                       expected: new[] { $"2,," },
+                       actual: parser.ReadFields()
+                    );
+                }
+                else if (CompatibilityMode)
+                {
+                    CollectionAssert.AreEqual(
+                       expected: new[] { $"\r2,," },
+                       actual: parser.ReadFields()
+                    );
+                }
+                else
+                {
+                    CollectionAssert.AreEqual(
+                       expected: new[] { $"\r\r2,," },
+                       actual: parser.ReadFields()
+                    );
+                }
                 Assert.IsTrue(parser.EndOfData);
             }
         }
 
         [Test]
-        public void ReadFields_QuotedTwoConsecutiveEOL()
+        public void ReadFields_QuotedTwoConsecutiveEOL([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\r\n\r\n2\""))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
                     expected: CompatibilityMode ? new[] { $"2\r\n2" } : new[] { $"2\r\n\r\n2" },
@@ -420,10 +460,12 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_QuotedManyConsecutiveEOL()
+        public void ReadFields_QuotedManyConsecutiveEOL([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\r\n\r\n\r\r\n\n\n\r\n2\""))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
                     expected: CompatibilityMode ? new[] { $"2\r\n2" } : new[] { $"2\r\n\r\n\r\r\n\n\n\r\n2" },
@@ -518,13 +560,15 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceBeforeQuote()
+        public void ReadFields_SpaceBeforeQuote([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser(" \"2,2\""))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
-                    expected: CompatibilityMode ? new[] { "2,2" } : new[] { " \"2", "2\"" },
+                    expected: CompatibilityMode || trimWhiteSpace ? new[] { "2,2" } : new[] { " \"2", "2\"" },
                     actual: parser.ReadFields()
                 );
 
@@ -554,12 +598,14 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceAfterEndQuote()
+        public void ReadFields_SpaceAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" "))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                if (CompatibilityMode)
+                if (CompatibilityMode || trimWhiteSpace)
                 {
                     CollectionAssert.AreEqual(
                         expected: new[] { "2", "" },
@@ -575,12 +621,14 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceAfterEndQuoteThenAnotherField()
+        public void ReadFields_SpaceAfterEndQuoteThenAnotherField([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" ,3"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                if (CompatibilityMode)
+                if (CompatibilityMode || trimWhiteSpace)
                 {
                     CollectionAssert.AreEqual(
                         expected: new[] { "2", "3" },
@@ -596,12 +644,14 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceAfterEndQuoteThenAnotherLine()
+        public void ReadFields_SpaceAfterEndQuoteThenAnotherLine([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \n3"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                if (CompatibilityMode)
+                if (CompatibilityMode || trimWhiteSpace)
                 {
                     CollectionAssert.AreEqual(
                         expected: new[] { "2" },
@@ -624,12 +674,14 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_MultipleSpacesAfterEndQuote()
+        public void ReadFields_MultipleSpacesAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \t    \t   "))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                if (CompatibilityMode)
+                if (CompatibilityMode || trimWhiteSpace)
                 {
                     CollectionAssert.AreEqual(
                         expected: new[] { "2", "" },
@@ -730,12 +782,14 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceAndNewlinesAfterEndQuote()
+        public void ReadFields_SpaceAndNewlinesAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"a\" \r\n"))
             {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
                 Assert.IsFalse(parser.EndOfData);
-                if (CompatibilityMode)
+                if (CompatibilityMode || trimWhiteSpace)
                 {
                     CollectionAssert.AreEqual(
                         expected: new[] { "a" },
@@ -792,6 +846,60 @@ namespace NotVisualBasic.FileIO
                 );
 
                 Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_EmptyString()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.Delimiters = new[] { string.Empty });
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_NullDelimiter()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.Delimiters = new[] { default(string) });
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_NewLine()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.Delimiters = new[] { "\n" });
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_CarriageReturn()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.Delimiters = new[] { "\r" });
+            }
+        }
+
+        [Test]
+        public void SetDelimiter_NewLine()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter('\n'));
+            }
+        }
+
+        [Test]
+        public void SetDelimiter_CarriageReturn()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter('\r'));
             }
         }
 
@@ -863,6 +971,5 @@ namespace NotVisualBasic.FileIO
                 Assert.AreEqual(-1L, parser.ErrorLineNumber);
             }
         }
-
     }
 }

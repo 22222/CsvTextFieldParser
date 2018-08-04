@@ -10,7 +10,7 @@ namespace NotVisualBasic.FileIO
     /// Parses comma-delimited text files.
     /// </summary>
     /// <remarks>
-    /// Based on <see cref="Microsoft.VisualBasic.FileIO.TextFieldParser"/>.
+    /// Based on <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
     /// </remarks>
     public class CsvTextFieldParser : IDisposable
     {
@@ -117,11 +117,11 @@ namespace NotVisualBasic.FileIO
 
         private string ParseField(ref string line, int startIndex, out int nextStartIndex)
         {
-            if (line[startIndex] == quoteChar)
+            if (HasFieldsEnclosedInQuotes && line[startIndex] == quoteChar)
             {
                 return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex);
             }
-            if (CompatibilityMode && char.IsWhiteSpace(line[startIndex]))
+            if ((CompatibilityMode || TrimWhiteSpace) && HasFieldsEnclosedInQuotes && char.IsWhiteSpace(line[startIndex]))
             {
                 int leadingWhitespaceCount = line.Skip(startIndex).TakeWhile(ch => char.IsWhiteSpace(ch)).Count();
                 int nonWhitespaceStartIndex = startIndex + leadingWhitespaceCount;
@@ -142,6 +142,10 @@ namespace NotVisualBasic.FileIO
             {
                 field = line.Substring(startIndex).TrimEnd('\r', '\n');
                 nextStartIndex = line.Length;
+            }
+            if (TrimWhiteSpace)
+            {
+                field = field.Trim();
             }
             return field;
         }
@@ -220,7 +224,7 @@ namespace NotVisualBasic.FileIO
                     i++;
                     isMalformed = false;
                 }
-                else if (CompatibilityMode && char.IsWhiteSpace(line[i]))
+                else if ((CompatibilityMode || TrimWhiteSpace) && char.IsWhiteSpace(line[i]))
                 {
                     isMalformed = true;
 
@@ -268,7 +272,12 @@ namespace NotVisualBasic.FileIO
                 );
             }
             nextStartIndex = i + 1;
-            return sb.ToString();
+            string field = sb.ToString();
+            if (TrimWhiteSpace)
+            {
+                field = field.Trim();
+            }
+            return field;
         }
 
         private bool HasNextLine()
@@ -343,7 +352,7 @@ namespace NotVisualBasic.FileIO
         {
             if (string.IsNullOrEmpty(line)) return true;
             if (line.All(ch => ch == '\r' || ch == '\n')) return true;
-            if (CompatibilityMode && string.IsNullOrWhiteSpace(line)) return true;
+            if ((CompatibilityMode || TrimWhiteSpace) && string.IsNullOrWhiteSpace(line)) return true;
             return false;
             
         }
@@ -426,22 +435,74 @@ namespace NotVisualBasic.FileIO
         #region Configuration
 
         /// <summary>
-        /// True if this parser should exactly reproduce the behavior of the <see cref="Microsoft.VisualBasic.FileIO.TextFieldParser"/>.
-        /// Defaults to false.
+        /// True if this parser should exactly reproduce the behavior of the <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
+        /// Defaults to <code>false</code>.
         /// </summary>
         public bool CompatibilityMode { get; set; } = false;
 
         /// <summary>
-        /// Sets the delimiter character used by this parser.  Default is a comma <code>,</code>.
+        /// Defines the delimiters for a text file.
+        /// Default is a comma.
         /// </summary>
-        public void SetDelimiter(char delimiterChar) { this.delimiterChar = delimiterChar; }
+        /// <remarks>
+        /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>, 
+        /// but this parser only supports one single-character delimiter.
+        /// </remarks>
+        /// <exception cref="ArgumentException">A delimiter value is set to a newline character, an empty string, or null.</exception>
+        /// <exception cref="NotSupportedException">The delimiters are set to an array that does not contain exactly one element with exactly one character.</exception>
+        public string[] Delimiters
+        {
+            get { return new string[] { delimiterChar.ToString() }; }
+            set
+            {
+                if (value == null || !value.Any())
+                {
+                    throw new NotSupportedException("This parser requires a delimiter");
+                }
+                if (value.Length > 1)
+                {
+                    throw new NotSupportedException("This parser does not support multiple delimiters.");
+                }
+
+                var delimiterString = value.Single();
+                if (string.IsNullOrEmpty(delimiterString))
+                {
+                    throw new ArgumentException("A delimiter cannot be null or an empty string.");
+                }
+                if (delimiterString.Length > 1)
+                {
+                    throw new NotSupportedException("This parser does not support a delimiter with multiple characters.");
+                }
+                SetDelimiter(delimiterString.Single());
+            }
+        }
+
+        /// <summary>
+        /// Sets the delimiter character used by this parser.
+        /// Default is a comma.
+        /// </summary>
+        /// <exception cref="ArgumentException">The delimiter character is set to a newline character.</exception>
+        public void SetDelimiter(char delimiterChar)
+        {
+            if (delimiterChar == '\n' || delimiterChar == '\r')
+            {
+                throw new ArgumentException("This parser does not support delimiters that contain end-of-line characters");
+            }
+            this.delimiterChar = delimiterChar;
+        }
 
         /// <summary>
         /// Sets the quote character used by this parser, and also sets the quote escape character to match if it previously matched.
-        /// Default is a double quote <code>"</code>.
+        /// Default is a double quote character.
         /// </summary>
+        /// <exception cref="ArgumentException">The quote character is set to a newline character.</exception>
         public void SetQuoteCharacter(char quoteChar)
         {
+            if (quoteChar == '\n' || quoteChar == '\r')
+            {
+                throw new ArgumentException("This parser does not support end-of-line characters as a quote character");
+            }
+
             // If the quote and escape characters currently match, then make sure they still match after we change the quote character.
             if (this.quoteChar == this.quoteEscapeChar)
             {
@@ -451,9 +512,30 @@ namespace NotVisualBasic.FileIO
         }
 
         /// <summary>
-        /// Sets the quote escape character used by this parser.  Default is the same as the quote character, a double quote <code>"</code>.
+        /// Sets the quote escape character used by this parser.
+        /// Default is the same as the quote character, a double quote character.
         /// </summary>
-        public void SetQuoteEscapeCharacter(char quoteEscapeChar) { this.quoteEscapeChar = quoteEscapeChar; }
+        /// <exception cref="ArgumentException">The quote escape character is set to a newline character.</exception>
+        public void SetQuoteEscapeCharacter(char quoteEscapeChar)
+        {
+            if (quoteEscapeChar == '\n' || quoteEscapeChar == '\r')
+            {
+                throw new ArgumentException("This parser does not support end-of-line characters as a quote escape character");
+            }
+            this.quoteEscapeChar = quoteEscapeChar;
+        }
+
+        /// <summary>
+        /// Denotes whether fields are enclosed in quotation marks when a CSV file is being parsed.
+        /// Defaults to <code>true</code>.
+        /// </summary>
+        public bool HasFieldsEnclosedInQuotes { get; set; } = true;
+
+        /// <summary>
+        /// Indicates whether leading and trailing white space should be trimmed from field values.
+        /// Defaults to <code>false</code>.
+        /// </summary>
+        public bool TrimWhiteSpace { get; set; } = false;
 
         #endregion
     }
@@ -462,7 +544,7 @@ namespace NotVisualBasic.FileIO
     /// An exception that is thrown when the <see cref="CsvTextFieldParser.ReadFields"/> method cannot parse a row using the specified format.
     /// </summary>
     /// <remarks>
-    /// Based on <see cref="Microsoft.VisualBasic.FileIO.MalformedLineException.MalformedLineException"/>.
+    /// Based on <code>Microsoft.VisualBasic.FileIO.MalformedLineException.MalformedLineException</code>.
     /// </remarks>
     public class CsvMalformedLineException : FormatException
     {

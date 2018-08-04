@@ -19,7 +19,37 @@ Alternatively, there are a couple more traditional ways to use this library:
 
 Getting Started
 ===============
-You've got some CSV data you need to parse:
+Using this library is almost exactly the same as using the VisualBasic `TextFieldParser` class.  Here's an example of using this library to parse CSV input into dictionaries:
+
+```c#
+public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeader(string csvInput)
+{
+	using (var csvReader = new StringReader(csvInput))
+	using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
+	{
+		if (parser.EndOfData)
+		{
+			yield break;
+		}
+		string[] headerFields = parser.ReadFields();
+		while (!parser.EndOfData)
+		{
+			string[] fields = parser.ReadFields();
+			int fieldCount = Math.Min(headerFields.Length, fields.Length);
+			IDictionary<string, string> fieldDictionary = new Dictionary<string, string>(fieldCount);
+			for (var i = 0; i < fieldCount; i++)
+			{
+				string headerField = headerFields[i];
+				string field = fields[i];
+				fieldDictionary[headerField] = field;
+			}
+			yield return fieldDictionary;
+		}
+	}
+}
+```
+
+But let's take a step back.  You've got some CSV data you need to parse:
 
 ```csv
 Name,Birth Date
@@ -30,7 +60,7 @@ Ivan Drago,1961-11-03
 That's easy, it only takes a few lines of code:
 
 ```c#
-public IEnumerable<string[]> ParseBasicCsv(string input)
+public static IEnumerable<string[]> ParseBasicCsv(string input)
 {
 	using (var reader = new StringReader(input))
 	{
@@ -45,9 +75,9 @@ public IEnumerable<string[]> ParseBasicCsv(string input)
 	}
 }
 
-public void ProcessCsv(string csvInput)
+public static void ProcessCsv(string csvInput)
 {
-	foreach (var csvLine in ParseBasicCsv(csvInput))
+	foreach (var csvLine in ParseBasicCsv(csvInput).Skip(1))
 	{
 		var name = csvLine[0];
 		var birthDate = csvLine[1];
@@ -56,7 +86,7 @@ public void ProcessCsv(string csvInput)
 }
 ```
 
-If that's the kind of CSV data you have, then throw this library in the garbage and just use that.
+If that's the kind of CSV data you have, then throw this library in the garbage and just use that.  Parsing CSV data is simple when your values will never contain any characters that require special handling.
 
 But wait, now they've changed the format of the CSV file.  Some of the values contain commas, so now you have to put those values in quotes:
 
@@ -76,7 +106,7 @@ Drago",1961-11-03
 "Robert ""Rocky"" Balboa",1945-07-06
 ```
 
-Now maybe it's time to consider a CSV library.  And what luck, the .NET library happens to have one built-in.  Here's your code now:
+Now maybe it's time to consider a CSV library.  And what luck, the .NET standard library happens to have one built-in.  Here's your code now:
 
 ```c#
 public static void ProcessCsv(string csvInput)
@@ -103,7 +133,7 @@ public static void ProcessCsv(string csvInput)
 
 That works great.  It's kind of a weird library, but it handles the quoting thing so you can have commas and newlines in your fields now.  So once again, this library can go straight into the garbage.
 
-There's just one thing that's kind of gross about this solution: we have to add a dependency on the `Microsoft.VisualBasic` assembly to our C# project.  It's still .NET, so that should all work fine.  But it feels a little wrong, doesn't it?
+But there's one thing that's kind of gross about this solution: we have to add a dependency on the `Microsoft.VisualBasic` assembly to our C# project.  It's still .NET, so that should all work fine.  But it feels a little wrong, doesn't it?
 
 And there's another problem.  The `Microsoft.VisualBasic` probably isn't in .NET Standard, and probably won't ever be.  So if you want CSV parsing in a .NET Core application, you're probably back to having to pick a library.
 
@@ -137,7 +167,7 @@ Error Handling
 There are two types of input that can cause an error when parsing a CSV file:
 
 * A quoted field has trailing characters after the closing quote character
-* An quoted field is started but never closed by another unescaped quote character
+* A quoted field is started but never closed by another unescaped quote character
 
 Either of these cases will cause a `CsvMalformedLineException` to be thrown.
 
@@ -150,27 +180,47 @@ Getting information about these errors works just like handling `Microsoft.Visua
 Here's an example of using this parser with error handling:
 
 ```c#
-public void ProcessCsv(string csvInput)
+public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeaderIgnoreErrors(string csvInput)
 {
 	using (var csvReader = new StringReader(csvInput))
 	using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
 	{
-		// Skip the header line
-		if (!parser.EndOfData) parser.ReadFields();
-
+		if (parser.EndOfData)
+		{
+			yield break;
+		}
+		string[] headerFields;
+		try
+		{
+			headerFields = parser.ReadFields();
+		}
+		catch (NotVisualBasic.FileIO.CsvMalformedLineException ex)
+		{
+			Console.Error.WriteLine($"Failed to parse header line {ex.LineNumber}: {parser.ErrorLine}");
+			yield break;
+		}
 		while (!parser.EndOfData)
 		{
+			string[] fields;
 			try
 			{
-				var csvLine = parser.ReadFields();
-				var name = csvLine[0];
-				var birthDate = csvLine[1];
-				Console.WriteLine($"{name} was born on {birthDate}");
+				fields = parser.ReadFields();
 			}
 			catch (NotVisualBasic.FileIO.CsvMalformedLineException ex)
 			{
 				Console.Error.WriteLine($"Failed to parse line {ex.LineNumber}: {parser.ErrorLine}");
+				continue;
 			}
+
+			int fieldCount = Math.Min(headerFields.Length, fields.Length);
+			IDictionary<string, string> fieldDictionary = new Dictionary<string, string>(fieldCount);
+			for (var i = 0; i < fieldCount; i++)
+			{
+				string headerField = headerFields[i];
+				string field = fields[i];
+				fieldDictionary[headerField] = field;
+			}
+			yield return fieldDictionary;
 		}
 	}
 }
@@ -200,15 +250,20 @@ Configuration
 =============
 There aren't a lot of configuration options available in this library, especially compared to the `Microsoft.VisualBasic.FileIO.TextFieldParser`.  But there are a few:
 
-* `SetDelimiter(char)`: change the delimiter character from a comma (`,`) to a different character, such as a pipe (`|`) or a tab (`\t`)
+* `SetDelimiter(char)` or `Delimiters`: change the delimiter character from a comma (`,`) to a different character, such as a pipe (`|`) or a tab (`\t`)
 * `SetQuoteCharacter(char)`: change the quote character from a double quote (`"`) to a different character, such as a single quote (`'`)
 * `SetQuoteEscapeCharacter(char)`: change the quote character from a double quote (`"`) to a different character, such as a backslash (`\\`)
+* `HasFieldsEnclosedInQuotes`: set to false if you want to skip all special character handling
+* `TrimWhiteSpace`: set to true if you want to ignore whitespace at the beginning and end of lines and in between fields
 
 Here's an example of setting each of those options:
 
 ```c#
 var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
 parser.SetDelimiter('|');
+parser.Delimiters = new[] { "|" };
 parser.SetQuoteCharacter('\'');
 parser.SetQuoteEscapeCharacter('\\');
+parser.HasFieldsEnclosedInQuotes = false;
+parser.TrimWhiteSpace = true;
 ```

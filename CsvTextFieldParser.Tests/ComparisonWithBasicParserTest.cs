@@ -11,8 +11,11 @@ namespace NotVisualBasic.FileIO
     public class ComparisonWithBasicParserTest
     {
         [TestCase("1234567890,\n", 100)]
+        [TestCase("1234567890,\n\"", 100)]
         [TestCase("2,\n\r", 100)]
         [TestCase("abcdefgh,\n\r\t ", 100)]
+        [TestCase("abcdefgh,\"\n\r\t ", 100)]
+        [TestCase("a2/\\#,\"'\n\r\t ", 100)]
         public void RandomInput(string inputCharsString, int iterations, int seed = 0)
         {
             var inputChars = inputCharsString.ToArray();
@@ -45,7 +48,7 @@ namespace NotVisualBasic.FileIO
 
         public IEnumerable<string[]> ParseFancyCsv(string input)
         {
-            using (var parser = new CsvTextFieldParser(new StringReader(input)))
+            using (var parser = new CsvTextFieldParser(new StringReader(input)) { HasFieldsEnclosedInQuotes = false })
             {
                 while (!parser.EndOfData)
                 {

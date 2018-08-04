@@ -74,5 +74,77 @@ namespace NotVisualBasic.FileIO
                 Assert.IsTrue(parser.EndOfData);
             }
         }
+
+        [Test]
+        public void SetDelimiters_Empty()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<NotSupportedException>(() => parser.Delimiters = new string[0]);
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_Null()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<NotSupportedException>(() => parser.Delimiters = null);
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_TwoDelimiters()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<NotSupportedException>(() => parser.Delimiters = new[] { ",", ";" });
+            }
+        }
+
+        [Test]
+        public void SetDelimiters_TwoCharacterDelimiter()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<NotSupportedException>(() => parser.Delimiters = new[] { "||" });
+            }
+        }
+
+        [Test]
+        public void SetQuoteCharacter_NewLine()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<ArgumentException>(() => parser.SetQuoteCharacter('\n'));
+            }
+        }
+
+        [Test]
+        public void SetQuoteCharacter_CarriageReturn()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<ArgumentException>(() => parser.SetQuoteCharacter('\r'));
+            }
+        }
+
+        [Test]
+        public void SetQuoteEscapeCharacter_NewLine()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<ArgumentException>(() => parser.SetQuoteEscapeCharacter('\n'));
+            }
+        }
+
+        [Test]
+        public void SetQuoteEscapeCharacter_CarriageReturn()
+        {
+            using (var parser = CreateParser("test"))
+            {
+                Assert.Throws<ArgumentException>(() => parser.SetQuoteEscapeCharacter('\r'));
+            }
+        }
     }
 }
