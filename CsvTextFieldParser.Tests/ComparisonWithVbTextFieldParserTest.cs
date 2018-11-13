@@ -106,5 +106,55 @@ namespace NotVisualBasic.FileIO
             parser.HasFieldsEnclosedInQuotes = hasFieldsEnclosedInQuotes;
             return parser;
         }
+
+        [Test]
+        public void ReadLine_Sample()
+        {
+            const string input = @"Name,Birth Date
+Apollo Creed,1942-08-17
+Ivan Drago,1961-11-03";
+
+            var parserReader = new StringReader(input);
+            var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(parserReader);
+            var vbParser = new Microsoft.VisualBasic.FileIO.TextFieldParser(new StringReader(input));
+            vbParser.SetDelimiters(",");
+
+            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.IsNull(vbParser.ReadFields());
+            Assert.IsNull(parser.ReadFields());
+            Assert.IsTrue(vbParser.EndOfData);
+            Assert.IsTrue(parser.EndOfData);
+        }
+
+        [Test]
+        public void ReadLine_SampleWithNewlineInQuotedField()
+        {
+            const string input = @"Name,Birth Date
+""Creed, Apollo"",1942-08-17
+""Ivan 
+Drago"",1961-11-03
+""Robert """"Rocky"""" Balboa"",1945-07-06";
+
+            var parserReader = new StringReader(input);
+            var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(parserReader);
+            var vbParser = new Microsoft.VisualBasic.FileIO.TextFieldParser(new StringReader(input));
+            vbParser.SetDelimiters(",");
+
+            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
+            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
+            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
+
+            // The readline should have read into the middle of the field, which changes the parsing output
+            CollectionAssert.AreEqual(new[] { @"Drago""", "1961-11-03" }, vbParser.ReadFields());
+            CollectionAssert.AreEqual(new[] { @"Drago""", "1961-11-03" }, parser.ReadFields());
+
+            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
+            Assert.IsNull(vbParser.ReadFields());
+            Assert.IsNull(parser.ReadFields());
+            Assert.IsTrue(vbParser.EndOfData);
+            Assert.IsTrue(parser.EndOfData);
+        }
     }
 }

@@ -246,5 +246,50 @@ Drago"",1961-11-03
             parser.HasFieldsEnclosedInQuotes = false;
             parser.TrimWhiteSpace = true;
         }
+
+        public static void ProcessReadLineFromReader(string csvInput)
+        {
+            using (var csvReader = new StringReader(csvInput))
+            using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
+            {
+                var fields = parser.ReadFields();
+                var line = csvReader.ReadLine();
+            }
+        }
+
+        public static IEnumerable<string> ProcessReadLineExtensionMethod(string csvInput)
+        {
+            using (var csvReader = new StringReader(csvInput))
+            using (var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader))
+            {
+                string line;
+                while ((line = parser.ReadLine()) != null)
+                {
+                    yield return line;
+                }
+            }
+        }
+    }
+
+    public static class CsvTextFieldParserExtensions
+    {
+        public static string ReadLine(this NotVisualBasic.FileIO.CsvTextFieldParser parser)
+        {
+            var fields = parser.ReadFields();
+            if (fields == null) return null;
+            
+            return string.Join(",", fields.Select(SerializeValue));
+        }
+
+        private static string SerializeValue(string value)
+        {
+            if (value == null) return null;
+
+            if (value.IndexOfAny(new char[] { ',', '"', '\n', '\r' }) >= 0)
+            {
+                return '"' + value.Replace("\"", "\"\"") + '"';
+            }
+            return value;
+        }
     }
 }
