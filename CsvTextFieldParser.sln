@@ -1,13 +1,25 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2008
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsvTextFieldParser", "CsvTextFieldParser\CsvTextFieldParser.csproj", "{E2CE0132-2F7F-4BE3-9820-F063D2847588}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvTextFieldParser.Tests", "CsvTextFieldParser.Tests\CsvTextFieldParser.Tests.csproj", "{BEF970B9-CBB2-4798-93CE-CB8D10C59939}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvTextFieldParser.SampleConsole", "CsvTextFieldParser.SampleConsole\CsvTextFieldParser.SampleConsole.csproj", "{0AC56627-6DA7-4900-8209-E5927434CE1C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{24FDA1AC-9A68-490D-AAEF-930803A3BD7D}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		appveyor.yml = appveyor.yml
+		Directory.Build.props = Directory.Build.props
+		LICENSE = LICENSE
+		README.md = README.md
+		UNLICENSE = UNLICENSE
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

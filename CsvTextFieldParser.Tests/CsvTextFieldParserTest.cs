@@ -1,11 +1,6 @@
-﻿using Microsoft.VisualBasic.FileIO;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NotVisualBasic.FileIO
 {
@@ -801,6 +796,17 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [Test]
+        public void ReadFields_BrokenQuotesSample()
+        {
+            using (var parser = CreateParser(@"""a""""b"""",""""c ""d"" e""""f"",""1"",""2, 3"",""4, 5"","""","""",""6"",""7"",""8"",""9"",""0"""))
+            {
+                Assert.IsFalse(parser.EndOfData);
+                Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 Assert.IsTrue(parser.EndOfData);
             }
         }

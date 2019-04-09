@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SampleConsole
 {
@@ -277,7 +275,7 @@ Drago"",1961-11-03
         {
             var fields = parser.ReadFields();
             if (fields == null) return null;
-            
+
             return string.Join(",", fields.Select(SerializeValue));
         }
 

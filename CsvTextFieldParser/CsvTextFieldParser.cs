@@ -354,7 +354,6 @@ namespace NotVisualBasic.FileIO
             if (line.All(ch => ch == '\r' || ch == '\n')) return true;
             if ((CompatibilityMode || TrimWhiteSpace) && string.IsNullOrWhiteSpace(line)) return true;
             return false;
-            
         }
 
         /// <summary>
