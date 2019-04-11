@@ -36,9 +36,9 @@ namespace NotVisualBasic.FileIO
                 using (var expectedParser = CreateExpectedParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 using (var actualParser = CreateActualParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 {
-
                     bool endOfData;
                     int logicalLineCounter = 0;
+                    string[] previousFields = null;
                     do
                     {
                         logicalLineCounter++;
@@ -47,6 +47,10 @@ namespace NotVisualBasic.FileIO
                         bool expectedEndOfData = expectedParser.EndOfData;
                         endOfData = actualEndOfData || expectedEndOfData;
                         Assert.AreEqual(expectedEndOfData, actualEndOfData, $"EndOfData mismatch on iteration {i} logical line {logicalLineCounter} for input: {input}");
+
+                        var actualLineNumber = actualParser.LineNumber;
+                        var expectedLineNumber = expectedParser.LineNumber;
+                        Assert.AreEqual(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
 
                         string[] actualFields;
                         CsvMalformedLineException actualException = null;
@@ -72,11 +76,14 @@ namespace NotVisualBasic.FileIO
                             expectedException = ex;
                         }
 
+                        previousFields = expectedFields;
+
                         if (expectedException != null || actualException != null)
                         {
                             Assert.IsNotNull(expectedException, $"Expected no exception but was {actualException?.GetType().Name} on iteration {i} on logical line {logicalLineCounter}");
                             Assert.IsNotNull(actualException, $"Expected {expectedException?.GetType().Name} but was no exception on iteration {i} on logical line {logicalLineCounter}");
                             Assert.AreEqual(expectedParser.ErrorLine, actualParser.ErrorLine, $"ErrorLine mismatch on iteration {i} on logical line {logicalLineCounter}");
+
                             // Who know what they're doing for their line numbers.  It doesn't really matter if we exactly match probably?
                             //Assert.AreEqual(expectedParser.ErrorLineNumber, actualParser.ErrorLineNumber, $"ErrorLineNumber mismatch on iteration {i} on line {logicalLineCounter}");
                         }

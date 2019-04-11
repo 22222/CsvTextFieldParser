@@ -20,6 +20,7 @@ namespace NotVisualBasic.FileIO
             string[] Delimiters { set; }
             bool HasFieldsEnclosedInQuotes { set; }
             bool TrimWhiteSpace { set; }
+            long LineNumber { get; }
             string ErrorLine { get; }
             long ErrorLineNumber { get; }
         }
@@ -38,6 +39,7 @@ namespace NotVisualBasic.FileIO
             public CsvTextFieldParser InnerParser { get; }
             public bool EndOfData => InnerParser.EndOfData;
             public string[] ReadFields() => InnerParser.ReadFields();
+            public long LineNumber => InnerParser.LineNumber;
             public string ErrorLine => InnerParser.ErrorLine;
             public long ErrorLineNumber => InnerParser.ErrorLineNumber;
             public void SetDelimiter(char delimiterChar) => InnerParser.SetDelimiter(delimiterChar);
@@ -975,6 +977,227 @@ namespace NotVisualBasic.FileIO
             {
                 Assert.AreEqual(string.Empty, parser.ErrorLine);
                 Assert.AreEqual(-1L, parser.ErrorLineNumber);
+            }
+        }
+
+        [Test]
+        public void LineNumber_SingleValue([Values(true, false)]bool checkEndOfData)
+        {
+            using (var parser = CreateParser("1"))
+            {
+                Assert.AreEqual(1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+            }
+        }
+
+        [Test]
+        public void LineNumber_TwoRows_TwoValues([Values(true, false)]bool checkEndOfData)
+        {
+            using (var parser = CreateParser($"1,2{Environment.NewLine}3,4"))
+            {
+                Assert.AreEqual(1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(2, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(2, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+            }
+        }
+
+        [Test]
+        public void LineNumber_SampleWithQuotedNewlines([Values(true, false)]bool trimWhiteSpace, [Values(true, false)]bool checkEndOfData)
+        {
+            using (var parser = CreateParser($"\"newline{Environment.NewLine}test\",2\nsecond line,3\n\"third\rline\n\r\n\n\",4"))
+            {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                Assert.AreEqual(1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(3, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(3, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(4, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(4, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+            }
+        }
+
+        [Test]
+        public void LineNumber_SampleWithBlankLine([Values(true, false)]bool checkEndOfData)
+        {
+            using (var parser = CreateParser($"1,2\n3,4\n\n5,6\n7"))
+            {
+                Assert.AreEqual(1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(2, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(2, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(3, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(3, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(5, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(5, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+            }
+        }
+
+        [Test]
+        public void LineNumber_SampleWithTrailingBlankLines([Values(true, false)]bool checkEndOfData)
+        {
+            using (var parser = CreateParser(",2,3\n,9\n\n\n"))
+            {
+                Assert.AreEqual(1, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(1, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(2, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsFalse(parser.EndOfData);
+                    Assert.AreEqual(2, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(3, parser.LineNumber);
+
+                if (checkEndOfData)
+                {
+                    Assert.IsTrue(parser.EndOfData);
+                    Assert.AreEqual(3, parser.LineNumber);
+                }
+
+                parser.ReadFields();
+                Assert.AreEqual(-1, parser.LineNumber);
+
+                for (var i = 0; i < 10; i++)
+                {
+                    if (checkEndOfData)
+                    {
+                        Assert.IsTrue(parser.EndOfData);
+                        Assert.AreEqual(-1, parser.LineNumber);
+                    }
+
+                    parser.ReadFields();
+                    Assert.AreEqual(-1, parser.LineNumber);
+                }
             }
         }
     }

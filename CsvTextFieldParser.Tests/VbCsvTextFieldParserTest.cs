@@ -35,6 +35,7 @@ namespace NotVisualBasic.FileIO
                     throw new CsvMalformedLineException(ex.Message, ex.LineNumber, ex);
                 }
             }
+            public long LineNumber => parser.LineNumber;
             public string ErrorLine => parser.ErrorLine;
             public long ErrorLineNumber => parser.ErrorLineNumber;
             public void SetDelimiter(char delimiterChar) => parser.SetDelimiters(delimiterChar.ToString());

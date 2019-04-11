@@ -17,6 +17,7 @@ namespace NotVisualBasic.FileIO
         private TextReader reader;
         private readonly bool leaveOpen = false;
         private string peekedLine = null;
+        private int peekedEmptyLineCount = 0;
         private long lineNumber = 0;
 
         private char delimiterChar = ',';
@@ -78,7 +79,7 @@ namespace NotVisualBasic.FileIO
         }
 
         /// <summary>
-        /// True if there are lines between the current cursor position and the end of the file.
+        /// True if there are non-empty lines between the current cursor position and the end of the file.
         /// </summary>
         public bool EndOfData => !HasNextLine();
 
@@ -286,27 +287,53 @@ namespace NotVisualBasic.FileIO
             {
                 return true;
             }
-
-            var nextLine = ReadNextLineWithTrailingEol(ignoreEmptyLines: true);
-            if (nextLine == null)
+            if (peekedEmptyLineCount > 0)
             {
                 return false;
             }
 
+            int ignoredEmptyLineCount;
+            var nextLine = ReadNextLineWithTrailingEol(ignoreEmptyLines: true, ignoredEmptyLineCount: out ignoredEmptyLineCount);
+            if (nextLine == null)
+            {
+                if (ignoredEmptyLineCount > 0)
+                {
+                    peekedEmptyLineCount = ignoredEmptyLineCount;
+                }
+                return false;
+            }
+
             peekedLine = nextLine;
+            peekedEmptyLineCount = ignoredEmptyLineCount;
             return true;
         }
 
         private string ReadNextLineWithTrailingEol(bool ignoreEmptyLines)
         {
+            int ignoredEmptyLineCount;
+            var line = ReadNextLineWithTrailingEol(ignoreEmptyLines, out ignoredEmptyLineCount);
+            return line;
+        }
+
+        private string ReadNextLineWithTrailingEol(bool ignoreEmptyLines, out int ignoredEmptyLineCount)
+        {
             var line = ReadNextLineOrWhitespaceWithTrailingEol();
+
+            if (line == null && peekedEmptyLineCount > 0)
+            {
+                peekedEmptyLineCount = 0;
+            }
+
+            ignoredEmptyLineCount = 0;
             if (ignoreEmptyLines)
             {
                 while (line != null && IsLineEmpty(line))
                 {
+                    ignoredEmptyLineCount++;
                     line = ReadNextLineOrWhitespaceWithTrailingEol();
                 }
             }
+
             return line;
         }
 
@@ -318,6 +345,7 @@ namespace NotVisualBasic.FileIO
             {
                 var temp = peekedLine;
                 peekedLine = null;
+                peekedEmptyLineCount = 0;
                 return temp;
             }
 
@@ -354,6 +382,27 @@ namespace NotVisualBasic.FileIO
             if (line.All(ch => ch == '\r' || ch == '\n')) return true;
             if ((CompatibilityMode || TrimWhiteSpace) && string.IsNullOrWhiteSpace(line)) return true;
             return false;
+        }
+
+        /// <summary>
+        /// The number of the line that will be returned by <see cref="ReadFields()"/> (starting at 1), or -1 if there are no more lines.
+        /// </summary>
+        public long LineNumber
+        {
+            get
+            {
+                if (!HasNextLine())
+                {
+                    // The VB version will return a line number if there's an empty line at the end of the file.
+                    // That's inconsitent with the HasNextLine method, so we'll only do that in compatibility mode.
+                    if (peekedEmptyLineCount > 0)
+                    {
+                        return lineNumber - peekedEmptyLineCount + 1;
+                    }
+                    return -1;
+                }
+                return lineNumber - peekedEmptyLineCount;
+            }
         }
 
         /// <summary>
