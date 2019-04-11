@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -31,7 +32,7 @@ namespace NotVisualBasic.FileIO
             : this(new StreamReader(stream)) { }
 
         /// <summary>
-        /// Constructs a parser from the specified input stream with the specified encoding. 
+        /// Constructs a parser from the specified input stream with the specified encoding.
         /// </summary>
         public CsvTextFieldParser(Stream stream, Encoding encoding)
             : this(new StreamReader(stream, encoding)) { }
@@ -436,7 +437,7 @@ namespace NotVisualBasic.FileIO
         }
 
         /// <summary>
-        /// Disposes of the current <see cref="CsvTextFieldParser"/> object. 
+        /// Disposes of the current <see cref="CsvTextFieldParser"/> object.
         /// </summary>
         /// <param name="disposing">true if called from <see cref="Dispose()"/>, or false if called from a finalizer</param>
         protected virtual void Dispose(bool disposing)
@@ -493,14 +494,17 @@ namespace NotVisualBasic.FileIO
         /// Default is a comma.
         /// </summary>
         /// <remarks>
-        /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>, 
+        /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>,
         /// but this parser only supports one single-character delimiter.
         /// </remarks>
         /// <exception cref="ArgumentException">A delimiter value is set to a newline character, an empty string, or null.</exception>
         /// <exception cref="NotSupportedException">The delimiters are set to an array that does not contain exactly one element with exactly one character.</exception>
         public string[] Delimiters
         {
-            get { return new string[] { delimiterChar.ToString() }; }
+            get
+            {
+                return new string[] { delimiterChar.ToString(CultureInfo.InvariantCulture) };
+            }
             set
             {
                 if (value == null || !value.Any())
