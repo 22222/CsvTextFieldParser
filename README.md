@@ -227,28 +227,9 @@ public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeaderIgnoreE
 ```
 
 
-Compatibility
-=============
-The goal of this library is to be compatible with `Microsoft.VisualBasic.FileIO.TextFieldParser`.  But the Visual Basic version of the parser has some strange behaviour in a few edge cases, mostly related to whitespace with quoted fields.  Some examples:
-
-* Two or more consecutive newlines in a quoted field are collapsed down to just one newline
-* Whitespace before a leading quote in a field is ignored (the entire field is parsed as a quoted character)
-* Whitespace after a field's end quote character is either ignored or treated as a separate field (depending on whether it's the last field in the file)
-* Non-empty lines of only whitespace are ignored
-
-By default, this parser does not recreate those behaviors.
-
-However, this parser does contain a compatibility mode to exactly match the VB parser for these cases.  The main reason this mode is included to make it possible to run unit tests that compare the results of this parser to the VB version.  But the mode is available to you as well if you need it:
-
-```c#
-var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
-parser.CompatibilityMode = true;
-```
-
-
 Configuration
 =============
-There aren't a lot of configuration options available in this library, especially compared to the `Microsoft.VisualBasic.FileIO.TextFieldParser`.  But there are a few:
+The configuration options available in this library are mostly based on the ones in the `Microsoft.VisualBasic.FileIO.TextFieldParser`.  They include:
 
 * `SetDelimiter(char)` or `Delimiters`: change the delimiter character from a comma (`,`) to a different character, such as a pipe (`|`) or a tab (`\t`)
 * `SetQuoteCharacter(char)`: change the quote character from a double quote (`"`) to a different character, such as a single quote (`'`)
@@ -266,4 +247,30 @@ parser.SetQuoteCharacter('\'');
 parser.SetQuoteEscapeCharacter('\\');
 parser.HasFieldsEnclosedInQuotes = false;
 parser.TrimWhiteSpace = true;
+```
+
+
+Compatibility
+=============
+The goal of this library is to be compatible with `Microsoft.VisualBasic.FileIO.TextFieldParser`.  But if you want to use this library as a drop-in replacement, you'll find that creating and configuring the parser isn't exactly the same.  The differences include:
+
+* The class name and namespace are different: `NotVisualBasic.FileIO.CsvTextFieldParser` instead of `Microsoft.VisualBasic.FileIO.TextFieldParser`
+* The exception class thrown for bad input is different: `CsvMalformedLineException` instead of `MalformedLineException`
+* Any features not related to parsing CSV files are missing (like allowing multiple or no delimiters, the `SetFieldWidths` option)
+* Some options have different default values
+    * `Delimiter`: this library defaults to a comma (`,`), TextFieldParser has no default delimiter
+    * `TrimWhiteSpace`: this library defaults to false, TextFieldParser defaults to true
+
+After the parser is created and configured, using this parser should be pretty much exactly the same as using TextFieldParser.  But the Visual Basic TextFieldParser has strange behaviour in a few edge cases, mostly related to whitespace with quoted fields.  Some examples:
+
+* Two or more consecutive newlines in a quoted field are collapsed down to just one newline
+* Whitespace before a leading quote in a field is ignored even when the `TrimWhitespace` is false (the entire field is parsed as a quoted character)
+* Whitespace after a field's end quote character is either ignored or treated as a separate field depending on whether it's the last field in the file
+* Non-empty lines of only whitespace are ignored
+
+By default, this parser does not recreate those behaviors.  However, this parser does contain a compatibility mode to exactly match the VB parser for these cases.  The main reason this mode is included to make it possible to run unit tests that compare the results of this parser to the VB version.  But the mode is available to you as well if you need it:
+
+```c#
+var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
+parser.CompatibilityMode = true;
 ```
