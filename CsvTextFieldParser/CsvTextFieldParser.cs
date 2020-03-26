@@ -147,7 +147,7 @@ namespace NotVisualBasic.FileIO
             }
 
             string field;
-            var delimiterIndex = line.IndexOf(delimiter, startIndex);
+            var delimiterIndex = line.IndexOf(delimiter, startIndex, StringComparison.Ordinal);
             if (delimiterIndex >= 0)
             {
                 field = line.Substring(startIndex, delimiterIndex - startIndex);
@@ -319,7 +319,7 @@ namespace NotVisualBasic.FileIO
                 return line.IndexOfAny(new char[] {delimiter[0], '\r', '\n'}, i);
             }
 
-            var delimiterIndex = line.IndexOf(delimiter, i, StringComparison.InvariantCulture);
+            var delimiterIndex = line.IndexOf(delimiter, i, StringComparison.Ordinal);
 
             return delimiterIndex < 0
                 ? line.IndexOfAny(new char[] { '\r', '\n' }, i)
