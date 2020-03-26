@@ -98,15 +98,6 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void SetDelimiters_TwoCharacterDelimiter()
-        {
-            using (var parser = CreateParser("test"))
-            {
-                Assert.Throws<NotSupportedException>(() => parser.Delimiters = new[] { "||" });
-            }
-        }
-
-        [Test]
         public void SetQuoteCharacter_NewLine()
         {
             using (var parser = CreateParser("test"))

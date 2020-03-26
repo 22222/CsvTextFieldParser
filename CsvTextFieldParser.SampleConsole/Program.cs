@@ -237,7 +237,7 @@ Drago"",1961-11-03
         public static void CreateWithConfigurationOptions(TextReader csvReader)
         {
             var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
-            parser.SetDelimiter('|');
+            parser.SetDelimiter("|");
             parser.Delimiters = new[] { "|" };
             parser.SetQuoteCharacter('\'');
             parser.SetQuoteEscapeCharacter('\\');
