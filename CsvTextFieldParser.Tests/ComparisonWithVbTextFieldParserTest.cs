@@ -18,6 +18,7 @@ namespace NotVisualBasic.FileIO
                 "a2/\\#,\"'\n\r\t "
             )]
             string inputCharsString,
+            [Values(",", ",,")] string delimiter,
             [Values(true, false)] bool trimWhiteSpace,
             [Values(true, false)] bool hasFieldsEnclosedInQuotes
         )
@@ -26,7 +27,7 @@ namespace NotVisualBasic.FileIO
             const int seed = 0;
             const int iterations = 1000;
 
-            var inputChars = inputCharsString.ToArray();
+            var inputChars = inputCharsString.Replace(",", delimiter).ToArray();
             var random = new Random(seed);
             for (var i = 0; i < iterations; i++)
             {
@@ -36,6 +37,9 @@ namespace NotVisualBasic.FileIO
                 using (var expectedParser = CreateExpectedParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 using (var actualParser = CreateActualParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 {
+                    expectedParser.SetDelimiters(delimiter);
+                    actualParser.SetDelimiter(delimiter);
+
                     bool endOfData;
                     int logicalLineCounter = 0;
                     string[] previousFields = null;

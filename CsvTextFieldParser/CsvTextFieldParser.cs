@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -101,15 +102,16 @@ namespace NotVisualBasic.FileIO
 
             var fields = new List<string>();
             int startIndex = 0;
+            int lastParsedIndex = 0;
             while (startIndex < line.Length)
             {
                 int nextStartIndex;
-                fields.Add(ParseField(ref line, startIndex, out nextStartIndex));
+                fields.Add(ParseField(ref line, startIndex, out nextStartIndex, out lastParsedIndex));
                 startIndex = nextStartIndex;
             }
 
             // If the last char is the delimiter, then we need to add an extra empty field.
-            if (line.Length == 0 || IsEndingEqualToDelimiter(line))
+            if (line.Length == 0 || IsEndingEqualToDelimiter(line, lastParsedIndex))
             {
                 fields.Add(string.Empty);
             }
@@ -117,24 +119,33 @@ namespace NotVisualBasic.FileIO
             return fields.ToArray();
         }
 
-        private bool IsEndingEqualToDelimiter(string line)
+        private bool IsEndingEqualToDelimiter(string line, int lastParsedIndex)
         {
             if (delimiter.Length == 1)
+            {
                 return line[line.Length - 1] == delimiter[0];
+            }
+
+            if (lastParsedIndex >= 0 && lastParsedIndex > line.Length - delimiter.Length)
+            {
+                return false;
+            }
 
             if (delimiter.Length > line.Length)
+            {
                 return false;
+            }
 
             return !delimiter
                 .Where((c, index) => line[line.Length - delimiter.Length + index] != c)
                 .Any();
         }
 
-        private string ParseField(ref string line, int startIndex, out int nextStartIndex)
+        private string ParseField(ref string line, int startIndex, out int nextStartIndex, out int lastParsedIndex)
         {
             if (HasFieldsEnclosedInQuotes && line[startIndex] == quoteChar)
             {
-                return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex);
+                return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex, out lastParsedIndex);
             }
             if ((CompatibilityMode || TrimWhiteSpace) && HasFieldsEnclosedInQuotes && char.IsWhiteSpace(line[startIndex]))
             {
@@ -142,7 +153,7 @@ namespace NotVisualBasic.FileIO
                 int nonWhitespaceStartIndex = startIndex + leadingWhitespaceCount;
                 if (nonWhitespaceStartIndex < line.Length && line[nonWhitespaceStartIndex] == quoteChar)
                 {
-                    return ParseFieldAfterOpeningQuote(ref line, nonWhitespaceStartIndex + 1, out nextStartIndex);
+                    return ParseFieldAfterOpeningQuote(ref line, nonWhitespaceStartIndex + 1, out nextStartIndex, out lastParsedIndex);
                 }
             }
 
@@ -151,11 +162,13 @@ namespace NotVisualBasic.FileIO
             if (delimiterIndex >= 0)
             {
                 field = line.Substring(startIndex, delimiterIndex - startIndex);
+                lastParsedIndex = startIndex + field.Length;
                 nextStartIndex = delimiterIndex + delimiter.Length;
             }
             else
             {
                 field = line.Substring(startIndex).TrimEnd('\r', '\n');
+                lastParsedIndex = startIndex + field.Length;
                 nextStartIndex = line.Length;
             }
             if (TrimWhiteSpace)
@@ -165,11 +178,12 @@ namespace NotVisualBasic.FileIO
             return field;
         }
 
-        private string ParseFieldAfterOpeningQuote(ref string line, int startIndex, out int nextStartIndex)
+        private string ParseFieldAfterOpeningQuote(ref string line, int startIndex, out int nextStartIndex, out int lastParsedIndex)
         {
             var sb = new StringBuilder();
             long currentLineNumber = lineNumber;
             int i = startIndex;
+            lastParsedIndex = 0;
             bool isQuoteClosed = false;
 
             do
@@ -194,6 +208,7 @@ namespace NotVisualBasic.FileIO
                     }
 
                     sb.Append(line[i]);
+                    lastParsedIndex = i;
                     i++;
                 }
 
@@ -254,8 +269,8 @@ namespace NotVisualBasic.FileIO
                         i = nextDelimiterOrEolIndex;
                         if (i < 0)
                         {
-                            line += ',';
-                            i = line.Length - 1;
+                            line += delimiter;
+                            i = line.Length - delimiter.Length;
                         }
                         else if (line[i] == '\r' || line[i] == '\n')
                         {
@@ -322,8 +337,8 @@ namespace NotVisualBasic.FileIO
             var delimiterIndex = line.IndexOf(delimiter, i, StringComparison.Ordinal);
 
             return delimiterIndex < 0
-                ? line.IndexOfAny(new char[] { '\r', '\n' }, i)
-                : delimiterIndex + delimiter.Length - 1;
+                ? line.IndexOfAny(new char[] {'\r', '\n'}, i)
+                : delimiterIndex;
         }
 
         private bool HasNextLine()
