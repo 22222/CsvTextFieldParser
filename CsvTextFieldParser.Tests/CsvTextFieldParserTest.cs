@@ -279,7 +279,6 @@ namespace NotVisualBasic.FileIO
             using (var parser = CreateParser(@"""test""""""test"""))
             {
                 parser.SetDelimiter("\"");
-                parser.HasFieldsEnclosedInQuotes = true;
 
                 Assert.IsFalse(parser.EndOfData);
                 Assert.Throws<InvalidOperationException>(() => parser.ReadFields());
@@ -355,6 +354,31 @@ namespace NotVisualBasic.FileIO
                 CollectionAssert.AreEqual(
                     expected: new[] { $"\"completely quoted\"", "3" },
                     actual: parser.ReadFields()
+                );
+
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [TestCase("test,,,,,", new[] { "test", "", "," })]
+        [TestCase("test,,,,", new[] { "test", "", "" })]
+        [TestCase("test,,,", new[] { "test", "," })]
+        [TestCase("test,,", new[] { "test", "" })]
+        [TestCase(",,,", new[] { "", "," })]
+        [TestCase(",,", new[] { "", "" })]
+        [TestCase(",", new[] { "," })]
+        public void ReadFields_SampleEndsWithMultipleDelimiter(string input, string [] expected)
+        {
+            using (var parser = CreateParser(input))
+            {
+                parser.SetDelimiter(",,");
+
+                Assert.IsFalse(parser.EndOfData);
+
+                var actual = parser.ReadFields();
+                CollectionAssert.AreEqual(
+                    expected: expected,
+                    actual: actual
                 );
 
                 Assert.IsTrue(parser.EndOfData);

@@ -108,16 +108,17 @@ namespace NotVisualBasic.FileIO
 
             var fields = new List<string>();
             int startIndex = 0;
-            int lastParsedIndex = 0;
+            int lastIndex = 0;
             while (startIndex < line.Length)
             {
                 int nextStartIndex;
-                fields.Add(ParseField(ref line, startIndex, out nextStartIndex, out lastParsedIndex));
+                fields.Add(ParseField(ref line, startIndex, out nextStartIndex));
+                lastIndex = startIndex;
                 startIndex = nextStartIndex;
             }
 
             // If the last char is the delimiter, then we need to add an extra empty field.
-            if (line.Length == 0 || IsEndingEqualToDelimiter(line, lastParsedIndex))
+            if (line.Length == 0 || IsEndingEqualToDelimiter(line, lastIndex))
             {
                 fields.Add(string.Empty);
             }
@@ -125,14 +126,14 @@ namespace NotVisualBasic.FileIO
             return fields.ToArray();
         }
 
-        private bool IsEndingEqualToDelimiter(string line, int lastParsedIndex)
+        private bool IsEndingEqualToDelimiter(string line, int lastIndex)
         {
             if (delimiter.Length == 1)
             {
                 return line[line.Length - 1] == delimiter[0];
             }
 
-            if (lastParsedIndex >= 0 && lastParsedIndex > line.Length - delimiter.Length)
+            if (lastIndex > line.Length - delimiter.Length)
             {
                 return false;
             }
@@ -147,11 +148,11 @@ namespace NotVisualBasic.FileIO
                 .Any();
         }
 
-        private string ParseField(ref string line, int startIndex, out int nextStartIndex, out int lastParsedIndex)
+        private string ParseField(ref string line, int startIndex, out int nextStartIndex)
         {
             if (HasFieldsEnclosedInQuotes && line[startIndex] == quoteChar)
             {
-                return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex, out lastParsedIndex);
+                return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex);
             }
             if ((CompatibilityMode || TrimWhiteSpace) && HasFieldsEnclosedInQuotes && char.IsWhiteSpace(line[startIndex]))
             {
@@ -159,7 +160,7 @@ namespace NotVisualBasic.FileIO
                 int nonWhitespaceStartIndex = startIndex + leadingWhitespaceCount;
                 if (nonWhitespaceStartIndex < line.Length && line[nonWhitespaceStartIndex] == quoteChar)
                 {
-                    return ParseFieldAfterOpeningQuote(ref line, nonWhitespaceStartIndex + 1, out nextStartIndex, out lastParsedIndex);
+                    return ParseFieldAfterOpeningQuote(ref line, nonWhitespaceStartIndex + 1, out nextStartIndex);
                 }
             }
 
@@ -168,13 +169,11 @@ namespace NotVisualBasic.FileIO
             if (delimiterIndex >= 0)
             {
                 field = line.Substring(startIndex, delimiterIndex - startIndex);
-                lastParsedIndex = startIndex + field.Length;
                 nextStartIndex = delimiterIndex + delimiter.Length;
             }
             else
             {
                 field = line.Substring(startIndex).TrimEnd('\r', '\n');
-                lastParsedIndex = startIndex + field.Length;
                 nextStartIndex = line.Length;
             }
             if (TrimWhiteSpace)
@@ -184,12 +183,11 @@ namespace NotVisualBasic.FileIO
             return field;
         }
 
-        private string ParseFieldAfterOpeningQuote(ref string line, int startIndex, out int nextStartIndex, out int lastParsedIndex)
+        private string ParseFieldAfterOpeningQuote(ref string line, int startIndex, out int nextStartIndex)
         {
             var sb = new StringBuilder();
             long currentLineNumber = lineNumber;
             int i = startIndex;
-            lastParsedIndex = 0;
             bool isQuoteClosed = false;
 
             do
@@ -214,7 +212,6 @@ namespace NotVisualBasic.FileIO
                     }
 
                     sb.Append(line[i]);
-                    lastParsedIndex = i;
                     i++;
                 }
 
