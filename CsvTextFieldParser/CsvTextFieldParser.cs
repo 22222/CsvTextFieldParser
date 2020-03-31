@@ -23,6 +23,7 @@ namespace NotVisualBasic.FileIO
         private long lineNumber = 0;
 
         private string delimiter = ",";
+        private bool delimiterContainsQuote = false;
         private char quoteChar = '"';
         private char quoteEscapeChar = '"';
 
@@ -93,6 +94,11 @@ namespace NotVisualBasic.FileIO
         public string[] ReadFields()
         {
             if (reader == null) return null;
+
+            if (HasFieldsEnclosedInQuotes && delimiterContainsQuote)
+            {
+                throw new InvalidOperationException($"Unable to read delimited fields because a double quote is not a legal delimiter when {nameof(HasFieldsEnclosedInQuotes)} is set to True.");
+            }
 
             var line = ReadNextLineWithTrailingEol(ignoreEmptyLines: true);
             if (line == null)
@@ -596,6 +602,7 @@ namespace NotVisualBasic.FileIO
                 throw new ArgumentException("This parser does not support delimiters that contain end-of-line characters");
             }
             this.delimiter = delimiterString;
+            this.delimiterContainsQuote = delimiterString.IndexOf('\"') > -1;
         }
 
         /// <summary>

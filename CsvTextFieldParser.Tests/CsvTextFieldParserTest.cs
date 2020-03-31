@@ -274,6 +274,21 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
+        public void ReadFields_QuoteAsDelimiter()
+        {
+            using (var parser = CreateParser(@"""test""""""test"""))
+            {
+                parser.SetDelimiter("\"");
+                parser.HasFieldsEnclosedInQuotes = true;
+
+                Assert.IsFalse(parser.EndOfData);
+                Assert.Throws<InvalidOperationException>(() => parser.ReadFields());
+
+                Assert.IsFalse(parser.EndOfData);
+            }
+        }
+
+        [Test]
         public void ReadFields_QuoteOnly()
         {
             using (var parser = CreateParser("\""))
