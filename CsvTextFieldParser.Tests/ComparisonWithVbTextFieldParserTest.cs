@@ -18,6 +18,7 @@ namespace NotVisualBasic.FileIO
                 "a2/\\#,\"'\n\r\t "
             )]
             string inputCharsString,
+            [Values(",", "|", "\"", ",,")] string delimiter,
             [Values(true, false)] bool trimWhiteSpace,
             [Values(true, false)] bool hasFieldsEnclosedInQuotes
         )
@@ -26,7 +27,7 @@ namespace NotVisualBasic.FileIO
             const int seed = 0;
             const int iterations = 1000;
 
-            var inputChars = inputCharsString.ToArray();
+            var inputChars = inputCharsString.Replace(",", delimiter).ToArray();
             var random = new Random(seed);
             for (var i = 0; i < iterations; i++)
             {
@@ -36,7 +37,11 @@ namespace NotVisualBasic.FileIO
                 using (var expectedParser = CreateExpectedParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 using (var actualParser = CreateActualParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 {
+                    expectedParser.SetDelimiters(delimiter);
+                    actualParser.SetDelimiter(delimiter);
+
                     bool endOfData;
+                    bool invalidConfiguration;
                     int logicalLineCounter = 0;
                     string[] previousFields = null;
                     do
@@ -53,7 +58,8 @@ namespace NotVisualBasic.FileIO
                         Assert.AreEqual(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
 
                         string[] actualFields;
-                        CsvMalformedLineException actualException = null;
+                        bool actualInvalidConfiguration = false;
+                        Exception actualException = null;
                         try
                         {
                             actualFields = actualParser.ReadFields();
@@ -63,9 +69,16 @@ namespace NotVisualBasic.FileIO
                             actualFields = null;
                             actualException = ex;
                         }
+                        catch (InvalidOperationException ex)
+                        {
+                            actualFields = null;
+                            actualException = ex;
+                            actualInvalidConfiguration = true;
+                        }
 
                         string[] expectedFields;
-                        MalformedLineException expectedException = null;
+                        bool expectedInvalidConfiguration = false;
+                        Exception expectedException = null;
                         try
                         {
                             expectedFields = expectedParser.ReadFields();
@@ -75,6 +88,14 @@ namespace NotVisualBasic.FileIO
                             expectedFields = null;
                             expectedException = ex;
                         }
+                        catch (InvalidOperationException ex)
+                        {
+                            expectedFields = null;
+                            expectedException = ex;
+                            expectedInvalidConfiguration = true;
+                        }
+
+                        invalidConfiguration = expectedInvalidConfiguration || actualInvalidConfiguration;
 
                         previousFields = expectedFields;
 
@@ -88,7 +109,7 @@ namespace NotVisualBasic.FileIO
                             //Assert.AreEqual(expectedParser.ErrorLineNumber, actualParser.ErrorLineNumber, $"ErrorLineNumber mismatch on iteration {i} on line {logicalLineCounter}");
                         }
                         CollectionAssert.AreEqual(expectedFields, actualFields, $"ReadFields mismatch on iteration {i} on logical line {logicalLineCounter} for input: {input}");
-                    } while (!endOfData);
+                    } while (!endOfData && !invalidConfiguration);
                 }
             }
         }

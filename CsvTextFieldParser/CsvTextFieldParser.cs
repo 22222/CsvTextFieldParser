@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -21,7 +22,8 @@ namespace NotVisualBasic.FileIO
         private int peekedEmptyLineCount = 0;
         private long lineNumber = 0;
 
-        private char delimiterChar = ',';
+        private string delimiter = ",";
+        private bool delimiterContainsQuote = false;
         private char quoteChar = '"';
         private char quoteEscapeChar = '"';
 
@@ -93,6 +95,11 @@ namespace NotVisualBasic.FileIO
         {
             if (reader == null) return null;
 
+            if (HasFieldsEnclosedInQuotes && delimiterContainsQuote)
+            {
+                throw new InvalidOperationException($"Unable to read delimited fields because a double quote is not a legal delimiter when {nameof(HasFieldsEnclosedInQuotes)} is set to True.");
+            }
+
             var line = ReadNextLineWithTrailingEol(ignoreEmptyLines: true);
             if (line == null)
             {
@@ -101,20 +108,44 @@ namespace NotVisualBasic.FileIO
 
             var fields = new List<string>();
             int startIndex = 0;
+            int lastIndex = 0;
             while (startIndex < line.Length)
             {
                 int nextStartIndex;
                 fields.Add(ParseField(ref line, startIndex, out nextStartIndex));
+                lastIndex = startIndex;
                 startIndex = nextStartIndex;
             }
 
             // If the last char is the delimiter, then we need to add an extra empty field.
-            if (line.Length == 0 || line[line.Length - 1] == delimiterChar)
+            if (line.Length == 0 || IsEndingEqualToDelimiter(line, lastIndex))
             {
                 fields.Add(string.Empty);
             }
 
             return fields.ToArray();
+        }
+
+        private bool IsEndingEqualToDelimiter(string line, int lastIndex)
+        {
+            if (delimiter.Length == 1)
+            {
+                return line[line.Length - 1] == delimiter[0];
+            }
+
+            if (lastIndex > line.Length - delimiter.Length)
+            {
+                return false;
+            }
+
+            if (delimiter.Length > line.Length)
+            {
+                return false;
+            }
+
+            return !delimiter
+                .Where((c, index) => line[line.Length - delimiter.Length + index] != c)
+                .Any();
         }
 
         private string ParseField(ref string line, int startIndex, out int nextStartIndex)
@@ -134,11 +165,11 @@ namespace NotVisualBasic.FileIO
             }
 
             string field;
-            var delimiterIndex = line.IndexOf(delimiterChar, startIndex);
+            var delimiterIndex = line.IndexOf(delimiter, startIndex, StringComparison.Ordinal);
             if (delimiterIndex >= 0)
             {
                 field = line.Substring(startIndex, delimiterIndex - startIndex);
-                nextStartIndex = delimiterIndex + 1;
+                nextStartIndex = delimiterIndex + delimiter.Length;
             }
             else
             {
@@ -212,7 +243,7 @@ namespace NotVisualBasic.FileIO
                 {
                     isMalformed = false;
                 }
-                else if (line[i] == delimiterChar)
+                else if (IsDelimiterAtPosition(line, i))
                 {
                     isMalformed = false;
                 }
@@ -232,7 +263,7 @@ namespace NotVisualBasic.FileIO
 
                     // The VB parser allows extra whitespace after the closing quote.
                     // And if that happens at the end of the file, this causes an extra blank space to be added.
-                    int nextDelimiterOrEolIndex = line.IndexOfAny(new char[] { delimiterChar, '\r', '\n' }, i);
+                    int nextDelimiterOrEolIndex = GetNextDelimiterOrEolIndex(line, i);
                     int remainingFieldLength = (nextDelimiterOrEolIndex >= 0 ? nextDelimiterOrEolIndex : line.Length) - i;
                     var isAllRemainingWhitespace = string.IsNullOrWhiteSpace(line.Substring(i, remainingFieldLength));
                     if (isAllRemainingWhitespace)
@@ -241,8 +272,8 @@ namespace NotVisualBasic.FileIO
                         i = nextDelimiterOrEolIndex;
                         if (i < 0)
                         {
-                            line += ',';
-                            i = line.Length - 1;
+                            line += delimiter;
+                            i = line.Length - delimiter.Length;
                         }
                         else if (line[i] == '\r' || line[i] == '\n')
                         {
@@ -273,13 +304,44 @@ namespace NotVisualBasic.FileIO
                     errorLineNumber: currentLineNumber
                 );
             }
-            nextStartIndex = i + 1;
+            nextStartIndex = i + delimiter.Length;
             string field = sb.ToString();
             if (TrimWhiteSpace)
             {
                 field = field.Trim();
             }
             return field;
+        }
+
+        private bool IsDelimiterAtPosition(string line, int i)
+        {
+            if (delimiter.Length == 1)
+            {
+                return line[i] == delimiter[0];
+            }
+
+            if (delimiter.Length > line.Length - i)
+            {
+                return false;
+            }
+
+            return !delimiter
+                .Where((c, index) => line[i + index] != c)
+                .Any();
+        }
+
+        private int GetNextDelimiterOrEolIndex(string line, int i)
+        {
+            if (delimiter.Length == 1)
+            {
+                return line.IndexOfAny(new char[] {delimiter[0], '\r', '\n'}, i);
+            }
+
+            var delimiterIndex = line.IndexOf(delimiter, i, StringComparison.Ordinal);
+
+            return delimiterIndex < 0
+                ? line.IndexOfAny(new char[] {'\r', '\n'}, i)
+                : delimiterIndex;
         }
 
         private bool HasNextLine()
@@ -495,15 +557,15 @@ namespace NotVisualBasic.FileIO
         /// </summary>
         /// <remarks>
         /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>,
-        /// but this parser only supports one single-character delimiter.
+        /// but this parser only supports one delimiter.
         /// </remarks>
         /// <exception cref="ArgumentException">A delimiter value is set to a newline character, an empty string, or null.</exception>
-        /// <exception cref="NotSupportedException">The delimiters are set to an array that does not contain exactly one element with exactly one character.</exception>
+        /// <exception cref="NotSupportedException">The delimiters are set to an array that does not contain exactly one element.</exception>
         public string[] Delimiters
         {
             get
             {
-                return new string[] { delimiterChar.ToString(CultureInfo.InvariantCulture) };
+                return new string[] { delimiter.ToString(CultureInfo.InvariantCulture) };
             }
             set
             {
@@ -521,26 +583,23 @@ namespace NotVisualBasic.FileIO
                 {
                     throw new ArgumentException("A delimiter cannot be null or an empty string.");
                 }
-                if (delimiterString.Length > 1)
-                {
-                    throw new NotSupportedException("This parser does not support a delimiter with multiple characters.");
-                }
-                SetDelimiter(delimiterString.Single());
+                SetDelimiter(delimiterString);
             }
         }
 
         /// <summary>
-        /// Sets the delimiter character used by this parser.
+        /// Sets the delimiter string used by this parser.
         /// Default is a comma.
         /// </summary>
-        /// <exception cref="ArgumentException">The delimiter character is set to a newline character.</exception>
-        public void SetDelimiter(char delimiterChar)
+        /// <exception cref="ArgumentException">The delimiter string is set to a newline character.</exception>
+        public void SetDelimiter(string delimiterString)
         {
-            if (delimiterChar == '\n' || delimiterChar == '\r')
+            if (delimiterString.Contains("\n") || delimiterString.Contains("\r"))
             {
                 throw new ArgumentException("This parser does not support delimiters that contain end-of-line characters");
             }
-            this.delimiterChar = delimiterChar;
+            this.delimiter = delimiterString;
+            this.delimiterContainsQuote = delimiterString.IndexOf('\"') > -1;
         }
 
         /// <summary>
