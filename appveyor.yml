@@ -1,4 +1,6 @@
-version: 1.2.8
+version: 1.2.2
+pull_requests:
+  do_not_increment_build_number: true
 skip_tags: true
 image: Visual Studio 2017
 configuration: Release
@@ -18,3 +20,10 @@ build:
 artifacts:
 - path: CsvTextFieldParser\bin\Release\*.nupkg
 - path: CsvTextFieldParser\bin\Release\netstandard2.0\*.*
+
+for:
+-
+  branches:
+    except:
+      - master
+  version: '0.0.{build}'

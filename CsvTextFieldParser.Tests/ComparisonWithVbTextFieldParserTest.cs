@@ -18,30 +18,60 @@ namespace NotVisualBasic.FileIO
                 "a2/\\#,\"'\n\r\t "
             )]
             string inputCharsString,
-            [Values(",", "|", "\"", ",,")] string delimiter,
             [Values(true, false)] bool trimWhiteSpace,
-            [Values(true, false)] bool hasFieldsEnclosedInQuotes
+            [Values(true, false)] bool hasFieldsEnclosedInQuotes,
+            [Values(",", ",,")] string delimiter
         )
+        {
+            RandomInput(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) => delimiter);
+        }
+
+        [Test]
+        public void RandomInput_RandomDelimiter(
+           [Values(
+                "1234567890,\n",
+                "1234567890,\n\"",
+                "2,\n\r\"",
+                "abcdefgh,\"\n\r\t ",
+                "a2/\\#,\"'\n\r\t "
+            )]
+            string inputCharsString,
+           [Values(true, false)] bool trimWhiteSpace,
+           [Values(true, false)] bool hasFieldsEnclosedInQuotes
+        )
+        {
+            RandomInput(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) =>
+            {
+                var delimiterLength = random.Next(minValue: 1, maxValue: 3);
+                var delimiterChars = inputCharsString.Except(new[] { '\r', '\n', '"' }).ToArray();
+                var delimiter = string.Join(string.Empty, Enumerable.Range(0, delimiterLength).Select(_ => delimiterChars[random.Next(0, delimiterChars.Length)]));
+                return delimiter;
+            });
+        }
+
+        private void RandomInput(string inputCharsString, bool trimWhiteSpace, bool hasFieldsEnclosedInQuotes, Func<Random, string> chooseDelimiter)
         {
             // Using a hardcoded seed so our "random" tests are deterministic.
             const int seed = 0;
             const int iterations = 1000;
 
-            var inputChars = inputCharsString.Replace(",", delimiter).ToArray();
+            var inputChars = inputCharsString.ToArray();
             var random = new Random(seed);
             for (var i = 0; i < iterations; i++)
             {
                 var inputLength = random.Next(minValue: 1, maxValue: 1000);
                 var input = string.Join(string.Empty, Enumerable.Range(0, inputLength).Select(_ => inputChars[random.Next(0, inputChars.Length)]));
-
+                var delimiter = chooseDelimiter?.Invoke(random);
                 using (var expectedParser = CreateExpectedParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 using (var actualParser = CreateActualParser(input, trimWhiteSpace, hasFieldsEnclosedInQuotes))
                 {
-                    expectedParser.SetDelimiters(delimiter);
-                    actualParser.SetDelimiter(delimiter);
+                    if (delimiter != null)
+                    {
+                        expectedParser.SetDelimiters(delimiter);
+                        actualParser.SetDelimiter(delimiter);
+                    }
 
                     bool endOfData;
-                    bool invalidConfiguration;
                     int logicalLineCounter = 0;
                     string[] previousFields = null;
                     do
@@ -51,15 +81,14 @@ namespace NotVisualBasic.FileIO
                         bool actualEndOfData = actualParser.EndOfData;
                         bool expectedEndOfData = expectedParser.EndOfData;
                         endOfData = actualEndOfData || expectedEndOfData;
-                        Assert.AreEqual(expectedEndOfData, actualEndOfData, $"EndOfData mismatch on iteration {i} logical line {logicalLineCounter} for input: {input}");
+                        Assert.AreEqual(expectedEndOfData, actualEndOfData, $"EndOfData mismatch on iteration {i} with delimiter \"{delimiter}\" logical line {logicalLineCounter} for input: {input}");
 
                         var actualLineNumber = actualParser.LineNumber;
                         var expectedLineNumber = expectedParser.LineNumber;
-                        Assert.AreEqual(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
+                        Assert.AreEqual(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
 
                         string[] actualFields;
-                        bool actualInvalidConfiguration = false;
-                        Exception actualException = null;
+                        CsvMalformedLineException actualException = null;
                         try
                         {
                             actualFields = actualParser.ReadFields();
@@ -69,16 +98,9 @@ namespace NotVisualBasic.FileIO
                             actualFields = null;
                             actualException = ex;
                         }
-                        catch (InvalidOperationException ex)
-                        {
-                            actualFields = null;
-                            actualException = ex;
-                            actualInvalidConfiguration = true;
-                        }
 
                         string[] expectedFields;
-                        bool expectedInvalidConfiguration = false;
-                        Exception expectedException = null;
+                        MalformedLineException expectedException = null;
                         try
                         {
                             expectedFields = expectedParser.ReadFields();
@@ -88,28 +110,20 @@ namespace NotVisualBasic.FileIO
                             expectedFields = null;
                             expectedException = ex;
                         }
-                        catch (InvalidOperationException ex)
-                        {
-                            expectedFields = null;
-                            expectedException = ex;
-                            expectedInvalidConfiguration = true;
-                        }
-
-                        invalidConfiguration = expectedInvalidConfiguration || actualInvalidConfiguration;
 
                         previousFields = expectedFields;
 
                         if (expectedException != null || actualException != null)
                         {
-                            Assert.IsNotNull(expectedException, $"Expected no exception but was {actualException?.GetType().Name} on iteration {i} on logical line {logicalLineCounter}");
-                            Assert.IsNotNull(actualException, $"Expected {expectedException?.GetType().Name} but was no exception on iteration {i} on logical line {logicalLineCounter}");
-                            Assert.AreEqual(expectedParser.ErrorLine, actualParser.ErrorLine, $"ErrorLine mismatch on iteration {i} on logical line {logicalLineCounter}");
+                            Assert.IsNotNull(expectedException, $"Expected no exception but was {actualException?.GetType().Name} on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
+                            Assert.IsNotNull(actualException, $"Expected {expectedException?.GetType().Name} but was no exception on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
+                            Assert.AreEqual(expectedParser.ErrorLine, actualParser.ErrorLine, $"ErrorLine mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
 
                             // Who know what they're doing for their line numbers.  It doesn't really matter if we exactly match probably?
                             //Assert.AreEqual(expectedParser.ErrorLineNumber, actualParser.ErrorLineNumber, $"ErrorLineNumber mismatch on iteration {i} on line {logicalLineCounter}");
                         }
-                        CollectionAssert.AreEqual(expectedFields, actualFields, $"ReadFields mismatch on iteration {i} on logical line {logicalLineCounter} for input: {input}");
-                    } while (!endOfData && !invalidConfiguration);
+                        CollectionAssert.AreEqual(expectedFields, actualFields, $"ReadFields mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for input: {input}");
+                    } while (!endOfData);
                 }
             }
         }

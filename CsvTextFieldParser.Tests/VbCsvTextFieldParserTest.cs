@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic.FileIO;
 using NUnit.Framework;
+using System.Globalization;
 using System.IO;
 
 namespace NotVisualBasic.FileIO
@@ -38,7 +39,8 @@ namespace NotVisualBasic.FileIO
             public long LineNumber => parser.LineNumber;
             public string ErrorLine => parser.ErrorLine;
             public long ErrorLineNumber => parser.ErrorLineNumber;
-            public void SetDelimiter(string delimiterString) => parser.SetDelimiters(delimiterString);
+            public void SetDelimiter(char delimiterChar) => parser.SetDelimiters(delimiterChar.ToString(CultureInfo.InvariantCulture));
+            public void SetDelimiter(string delimiter) => parser.SetDelimiters(delimiter);
             public string[] Delimiters { set => parser.Delimiters = value; }
             public bool HasFieldsEnclosedInQuotes { set => parser.HasFieldsEnclosedInQuotes = value; }
             public bool TrimWhiteSpace { set => parser.TrimWhiteSpace = value; }

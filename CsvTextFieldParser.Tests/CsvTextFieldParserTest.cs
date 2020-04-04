@@ -16,7 +16,8 @@ namespace NotVisualBasic.FileIO
         {
             bool EndOfData { get; }
             string[] ReadFields();
-            void SetDelimiter(string delimiterString);
+            void SetDelimiter(char delimiterChar);
+            void SetDelimiter(string delimiter);
             string[] Delimiters { set; }
             bool HasFieldsEnclosedInQuotes { set; }
             bool TrimWhiteSpace { set; }
@@ -42,7 +43,8 @@ namespace NotVisualBasic.FileIO
             public long LineNumber => InnerParser.LineNumber;
             public string ErrorLine => InnerParser.ErrorLine;
             public long ErrorLineNumber => InnerParser.ErrorLineNumber;
-            public void SetDelimiter(string delimiterString) => InnerParser.SetDelimiter(delimiterString);
+            public void SetDelimiter(char delimiterChar) => InnerParser.SetDelimiter(delimiterChar);
+            public void SetDelimiter(string delimiter) => InnerParser.SetDelimiter(delimiter);
             public string[] Delimiters { set => InnerParser.Delimiters = value; }
             public bool HasFieldsEnclosedInQuotes { set => InnerParser.HasFieldsEnclosedInQuotes = value; }
             public bool TrimWhiteSpace { set => InnerParser.TrimWhiteSpace = value; }
@@ -367,7 +369,7 @@ namespace NotVisualBasic.FileIO
         [TestCase(",,,", new[] { "", "," })]
         [TestCase(",,", new[] { "", "" })]
         [TestCase(",", new[] { "," })]
-        public void ReadFields_SampleEndsWithMultipleDelimiter(string input, string [] expected)
+        public void ReadFields_SampleEndsWithMultipleDelimiter(string input, string[] expected)
         {
             using (var parser = CreateParser(input))
             {
@@ -634,10 +636,11 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_SpaceAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
+        public void ReadFields_SpaceAfterEndQuote([Values(",", "|", ",,")]string delimiter, [Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" "))
             {
+                parser.SetDelimiter(delimiter);
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
                 Assert.IsFalse(parser.EndOfData);
@@ -710,10 +713,11 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
-        public void ReadFields_MultipleSpacesAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
+        public void ReadFields_MultipleSpacesAfterEndQuote([Values(",", "|", ",,")]string delimiter, [Values(true, false)]bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \t    \t   "))
             {
+                parser.SetDelimiter(delimiter);
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
                 Assert.IsFalse(parser.EndOfData);
@@ -852,15 +856,101 @@ namespace NotVisualBasic.FileIO
             }
         }
 
+        [Test]
+        public void ReadFields_DelimiterAndTabAfterEndQuote([Values(",", "|", ",,", ", ", "TEST")]string delimiter, [Values(true, false)]bool trimWhiteSpace)
+        {
+            using (var parser = CreateParser($@"""a""	{delimiter}b"))
+            {
+                parser.SetDelimiter(delimiter);
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                Assert.IsFalse(parser.EndOfData);
+
+                if (CompatibilityMode || trimWhiteSpace)
+                {
+                    var actual = parser.ReadFields();
+                    CollectionAssert.AreEqual(
+                        expected: new[] { "a", "b" },
+                        actual: actual
+                    );
+                }
+                else
+                {
+                    Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
+                }
+
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [Test]
+        public void ReadFields_DelimiterWithSpace([Values(true, false)]bool trimWhiteSpace)
+        {
+            const string delimiter = ", ";
+            using (var parser = CreateParser($@"""a""{delimiter}b"))
+            {
+                parser.SetDelimiter(delimiter);
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                Assert.IsFalse(parser.EndOfData);
+
+                if (CompatibilityMode || trimWhiteSpace)
+                {
+                    var actual = parser.ReadFields();
+                    CollectionAssert.AreEqual(
+                        expected: new[] { "a", "b" },
+                        actual: actual
+                    );
+                }
+                else
+                {
+                    Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
+                }
+
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [Test]
+        public void ReadFields_DelimiterWithSpace_LeadingWhitespace([Values(true, false)]bool trimWhiteSpace)
+        {
+            const string delimiter = "# ";
+            using (var parser = CreateParser($@" ""/""##""#\"))
+            {
+                parser.SetDelimiter(delimiter);
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                Assert.IsFalse(parser.EndOfData);
+
+                var actual = parser.ReadFields();
+                if (trimWhiteSpace)
+                {
+                    CollectionAssert.AreEqual(
+                        expected: new[] { @"""/""##""#\" },
+                        actual: actual
+                    );
+                }
+                else
+                {
+                    CollectionAssert.AreEqual(
+                        expected: new[] { @" ""/""##""#\" },
+                        actual: actual
+                    );
+                }
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
         [TestCase(",")]
         [TestCase("|")]
         [TestCase("\t")]
-        [TestCase("||")]
-        public void SetDelimiter_ReadFields_Sample(string delimiterString)
+        [TestCase(",,")]
+        [TestCase("tst")]
+        public void SetDelimiter_ReadFields_Sample(string delimiter)
         {
-            using (var parser = CreateParser($@"1{delimiterString}2{delimiterString}3{Environment.NewLine}4{delimiterString}5"))
+            using (var parser = CreateParser($@"1{delimiter}2{delimiter}3{Environment.NewLine}4{delimiter}5"))
             {
-                parser.SetDelimiter(delimiterString);
+                parser.SetDelimiter(delimiter);
 
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
@@ -881,16 +971,17 @@ namespace NotVisualBasic.FileIO
         [TestCase(",")]
         [TestCase("|")]
         [TestCase("\t")]
-        [TestCase("||")]
-        public void SetDelimiter_ReadFields_SampleWithQuotedDelimiters(string delimiterString)
+        [TestCase(",,")]
+        [TestCase("tst")]
+        public void SetDelimiter_ReadFields_SampleWithQuotedDelimiters(string delimiter)
         {
-            using (var parser = CreateParser($@"1{delimiterString}test{delimiterString}""a{delimiterString}test""{delimiterString}2"))
+            using (var parser = CreateParser($@"1{delimiter}test{delimiter}""a{delimiter}test""{delimiter}2"))
             {
-                parser.SetDelimiter(delimiterString);
+                parser.SetDelimiter(delimiter);
 
                 Assert.IsFalse(parser.EndOfData);
                 CollectionAssert.AreEqual(
-                    expected: new[] { "1", "test", $"a{delimiterString}test", "2" },
+                    expected: new[] { "1", "test", $"a{delimiter}test", "2" },
                     actual: parser.ReadFields()
                 );
 
@@ -898,20 +989,13 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [TestCase("||")]
-        public void SetDelimiter_ReadFields_DelimiterLongerThanLine(string delimiterString)
+        [Test]
+        public void SetDelimiter_ReadFields_DelimiterIsDoubleQuote()
         {
-            using (var parser = CreateParser("1"))
+            using (var parser = CreateParser("1,2,3"))
             {
-                parser.SetDelimiter(delimiterString);
-
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
-                    expected: new[] { "1" },
-                    actual: parser.ReadFields()
-                );
-
-                Assert.IsTrue(parser.EndOfData);
+                parser.SetDelimiter('"');
+                Assert.Throws<InvalidOperationException>(() => parser.ReadFields());
             }
         }
 
@@ -956,7 +1040,7 @@ namespace NotVisualBasic.FileIO
         {
             using (var parser = CreateParser("test"))
             {
-                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter("\n"));
+                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter('\n'));
             }
         }
 
@@ -965,7 +1049,7 @@ namespace NotVisualBasic.FileIO
         {
             using (var parser = CreateParser("test"))
             {
-                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter("\r"));
+                var ex = Assert.Throws<ArgumentException>(() => parser.SetDelimiter('\r'));
             }
         }
 
@@ -1011,7 +1095,7 @@ namespace NotVisualBasic.FileIO
 
                 Assert.IsFalse(parser.EndOfData);
                 var ex = Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.AreEqual($"\"2{delimiter}22\n3\r\n4", parser.ErrorLine);
+                Assert.AreEqual("\"2,22\n3\r\n4", parser.ErrorLine);
                 Assert.AreEqual(2, parser.ErrorLineNumber);
 
                 Assert.IsTrue(parser.EndOfData);

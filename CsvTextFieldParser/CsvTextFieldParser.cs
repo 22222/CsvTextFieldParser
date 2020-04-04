@@ -592,6 +592,14 @@ namespace NotVisualBasic.FileIO
         /// Default is a comma.
         /// </summary>
         /// <exception cref="ArgumentException">The delimiter string is set to a newline character.</exception>
+        public void SetDelimiter(char delimiterChar)
+            => SetDelimiter(delimiterChar.ToString(CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// Sets the delimiter string used by this parser.
+        /// Default is a comma.
+        /// </summary>
+        /// <exception cref="ArgumentException">The delimiter string is set to a newline character.</exception>
         public void SetDelimiter(string delimiterString)
         {
             if (delimiterString.Contains("\n") || delimiterString.Contains("\r"))
