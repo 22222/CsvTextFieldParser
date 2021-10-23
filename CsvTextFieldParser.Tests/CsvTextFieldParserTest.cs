@@ -695,6 +695,31 @@ namespace NotVisualBasic.FileIO
         }
 
         [Test]
+        public void ReadFields_MultipleSpacesAfterEndQuote_CustomDelimiter([Values(true, false)] bool trimWhiteSpace)
+        {
+            using (var parser = CreateParser("\"2\" \t    \t   "))
+            {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+                parser.SetDelimiter('|');
+
+                Assert.IsFalse(parser.EndOfData);
+                if (CompatibilityMode || trimWhiteSpace)
+                {
+                    CollectionAssert.AreEqual(
+                        expected: new[] { "2", "" },
+                        actual: parser.ReadFields()
+                    );
+                }
+                else
+                {
+                    Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
+                }
+
+                Assert.IsTrue(parser.EndOfData);
+            }
+        }
+
+        [Test]
         public void ReadFields_RandomSample_SpaceBeforeStartQuote_TabAndCharAfterEndQuote()
         {
             using (var parser = CreateParser("edf\r\n \"	 \n,f\n\r\"\rfa,\"f\" 	c\n"))

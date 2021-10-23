@@ -241,7 +241,7 @@ namespace NotVisualBasic.FileIO
                         i = nextDelimiterOrEolIndex;
                         if (i < 0)
                         {
-                            line += ',';
+                            line += delimiterChar;
                             i = line.Length - 1;
                         }
                         else if (line[i] == '\r' || line[i] == '\n')
