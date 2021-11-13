@@ -838,6 +838,32 @@ namespace NotVisualBasic.FileIO
             }
         }
 
+        [Test]
+        public void ReadFields_SampleWithTabDelimiterAndTrimWhiteSpace()
+        {
+            using (var parser = CreateParser(@"a		""\,
+2a,\,,,'
+a# 
+22#' '\/\	,a/ /'# 2
+ \,2/""""
+22# 	\ 	,/""
+2'	2 \\,/a\a/\
+	
+\,,2'a2""""2	 \2/,,""\#\2 \a,2	\
+'""2/2
+2""""'
+""#2#, "))
+            {
+                parser.SetDelimiter('\t');
+                parser.TrimWhiteSpace = true;
+                Assert.IsFalse(parser.EndOfData);
+                CollectionAssert.AreEqual(
+                    expected: new[] { "a", "", "\\,\r\n2a,\\,,,'\r\na# \r\n22#' '\\/\\\t,a/ /'# 2\r\n \\,2/\"\r\n22# \t\\ \t,/" },
+                    actual: parser.ReadFields()
+                );
+            }
+        }
+
         [TestCase(',')]
         [TestCase('|')]
         [TestCase('\t')]
