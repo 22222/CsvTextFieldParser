@@ -123,9 +123,9 @@ namespace NotVisualBasic.FileIO
             {
                 return ParseFieldAfterOpeningQuote(ref line, startIndex + 1, out nextStartIndex);
             }
-            if ((CompatibilityMode || TrimWhiteSpace) && HasFieldsEnclosedInQuotes && char.IsWhiteSpace(line[startIndex]))
+            if ((CompatibilityMode || TrimWhiteSpace) && HasFieldsEnclosedInQuotes && char.IsWhiteSpace(line[startIndex]) && line[startIndex] != delimiterChar)
             {
-                int leadingWhitespaceCount = line.Skip(startIndex).TakeWhile(ch => char.IsWhiteSpace(ch)).Count();
+                int leadingWhitespaceCount = line.Skip(startIndex).TakeWhile(ch => char.IsWhiteSpace(ch) && ch != delimiterChar).Count();
                 int nonWhitespaceStartIndex = startIndex + leadingWhitespaceCount;
                 if (nonWhitespaceStartIndex < line.Length && line[nonWhitespaceStartIndex] == quoteChar)
                 {
@@ -226,7 +226,7 @@ namespace NotVisualBasic.FileIO
                     i++;
                     isMalformed = false;
                 }
-                else if ((CompatibilityMode || TrimWhiteSpace) && char.IsWhiteSpace(line[i]))
+                else if ((CompatibilityMode || TrimWhiteSpace) && char.IsWhiteSpace(line[i]) && line[i] != delimiterChar)
                 {
                     isMalformed = true;
 
