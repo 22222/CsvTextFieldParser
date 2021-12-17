@@ -1,6 +1,6 @@
 A simple CSV parser based on Microsoft.VisualBasic.FileIO.TextFieldParser.
 
-[![Build status](https://ci.appveyor.com/api/projects/status/o13wp50j7iqoxcse?svg=true)](https://ci.appveyor.com/project/22222/csvtextfieldparser)
+![Build status](https://github.com/22222/CsvTextFieldParser/actions/workflows/build.yml/badge.svg)
 
 The goal of this library is to provide a simple alternative to the `TextFieldParser` class in the `Microsoft.VisualBasic` assembly that works with .NET Core, or just that doesn't require you to use a VisualBasic assembly to a C# project.
 
