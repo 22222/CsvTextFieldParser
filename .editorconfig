@@ -8,3 +8,33 @@ trim_trailing_whitespace = true
 
 [*.{csproj,properties,json,ruleset}]
 indent_size = 2
+
+[*.cs]
+dotnet_diagnostic.CA1032.severity = none
+dotnet_diagnostic.CA1303.severity = none # Do not pass literals as localized parameters
+dotnet_diagnostic.CA1819.severity = none
+dotnet_diagnostic.SA1009.severity = none # Closing parenthesis should be spaced correctly
+dotnet_diagnostic.SA1101.severity = none # Prefix local calls with this
+dotnet_diagnostic.SA1111.severity = none # Closing parenthesis should be on line of last parameter
+dotnet_diagnostic.SA1124.severity = none # Do not use regions
+dotnet_diagnostic.SA1200.severity = none
+dotnet_diagnostic.SA1201.severity = none # Elements should appear in the correct order
+dotnet_diagnostic.SA1202.severity = none # Elements should be ordered by access
+dotnet_diagnostic.SA1204.severity = none # Static elements should appear before instance elements
+dotnet_diagnostic.SA1214.severity = none # Readonly fields should appear before non-readonly fields
+dotnet_diagnostic.SA1402.severity = none # File may only contain a single type
+dotnet_diagnostic.SA1500.severity = none
+dotnet_diagnostic.SA1501.severity = none
+dotnet_diagnostic.SA1502.severity = none # Element should not be on a single line
+dotnet_diagnostic.SA1503.severity = none
+dotnet_diagnostic.SA1512.severity = none # Single-line comments should not be followed by blank line
+dotnet_diagnostic.SA1513.severity = none # Closing brace should be followed by blank line
+dotnet_diagnostic.SA1515.severity = none # Single-line comment should be preceded by blank line
+dotnet_diagnostic.SA1516.severity = none
+dotnet_diagnostic.SA1611.severity = none
+dotnet_diagnostic.SA1623.severity = none # Property summary documentation should match accessors
+dotnet_diagnostic.SA1624.severity = none # Property summary documentation should omit accessor with restricted access
+dotnet_diagnostic.SA1629.severity = none
+dotnet_diagnostic.SA1633.severity = none # File should have header
+dotnet_diagnostic.SA1642.severity = none # Constructor summary documentation should begin with standard text
+dotnet_diagnostic.SA1643.severity = none # Destructor summary documentation should begin with standard text
