@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: nupkg
-          path: ./CsvTextFieldParser/bin/Release/*.nupkg
+          path: ./CsvTextFieldParser/bin/Release/*.*nupkg
       - name: Upload Artifact Bin
         if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v2
