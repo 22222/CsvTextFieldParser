@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualBasic.FileIO;
-using NUnit.Framework;
 using System.IO;
+using Xunit;
 
 namespace NotVisualBasic.FileIO
 {
@@ -45,25 +45,25 @@ namespace NotVisualBasic.FileIO
             public void Dispose() => parser.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_Empty()
         {
             using (var parser = new TextFieldParser(new StringReader("test")))
             {
                 parser.Delimiters = new string[0];
                 var actual = parser.Delimiters;
-                Assert.AreEqual(0, actual.Length);
+                Assert.Equal(0, actual.Length);
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_Null()
         {
             using (var parser = new TextFieldParser(new StringReader("test")))
             {
                 parser.Delimiters = null;
                 var actual = parser.Delimiters;
-                Assert.IsNull(actual);
+                Assert.Null(actual);
             }
         }
     }

@@ -1,6 +1,6 @@
-﻿using NUnit.Framework;
-using System;
+﻿using System;
 using System.IO;
+using Xunit;
 
 namespace NotVisualBasic.FileIO
 {
@@ -49,176 +49,180 @@ namespace NotVisualBasic.FileIO
             public void Dispose() => InnerParser.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_SingleValue()
         {
             using (var parser = CreateParser("1"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_TwoRows_SingleValue()
         {
             using (var parser = CreateParser($"1{Environment.NewLine}2"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_TwoValues()
         {
             using (var parser = CreateParser("1,2"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_TwoRows_TwoValues()
         {
             using (var parser = CreateParser($"1,2{Environment.NewLine}3,4"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "3", "4" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_TwoRows_TwoValues_EmptyLines()
         {
             using (var parser = CreateParser($"{Environment.NewLine}{Environment.NewLine}1,2{Environment.NewLine}{Environment.NewLine}3,4{Environment.NewLine}{Environment.NewLine}"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "3", "4" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_TwoRows_TwoValues_WhiteSpaceLines()
         {
             using (var parser = CreateParser($"{Environment.NewLine} {Environment.NewLine}1,2{Environment.NewLine} \t {Environment.NewLine}3,4{Environment.NewLine}\t{Environment.NewLine}"))
             {
                 if (!CompatibilityMode)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { " " },
                         actual: parser.ReadFields()
                     );
                 }
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "2" },
                     actual: parser.ReadFields()
                 );
 
                 if (!CompatibilityMode)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { " \t " },
                         actual: parser.ReadFields()
                     );
                 }
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "3", "4" },
                     actual: parser.ReadFields()
                 );
 
                 if (!CompatibilityMode)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "\t" },
                         actual: parser.ReadFields()
                     );
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_Empty([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_Empty(bool trimWhiteSpace)
         {
             using (var parser = CreateParser(string.Empty))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsTrue(parser.EndOfData);
-                Assert.IsNull(parser.ReadFields());
+                Assert.True(parser.EndOfData);
+                Assert.Null(parser.ReadFields());
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_CommaOnly()
         {
             using (var parser = CreateParser(","))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "", "" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceOnly([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceOnly(bool trimWhiteSpace)
         {
             using (var parser = CreateParser(" "))
             {
@@ -226,362 +230,378 @@ namespace NotVisualBasic.FileIO
 
                 if (!CompatibilityMode && !trimWhiteSpace)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { " " },
                         actual: parser.ReadFields()
                     );
                 }
-                Assert.IsTrue(parser.EndOfData);
-                Assert.IsNull(parser.ReadFields());
+                Assert.True(parser.EndOfData);
+                Assert.Null(parser.ReadFields());
             }
         }
 
-        [Test]
-        public void ReadFields_CrOnly([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_CrOnly(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\r"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsTrue(parser.EndOfData);
-                Assert.IsNull(parser.ReadFields());
+                Assert.True(parser.EndOfData);
+                Assert.Null(parser.ReadFields());
             }
         }
 
-        [Test]
-        public void ReadFields_LfOnly([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_LfOnly(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\n"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsTrue(parser.EndOfData);
-                Assert.IsNull(parser.ReadFields());
+                Assert.True(parser.EndOfData);
+                Assert.Null(parser.ReadFields());
             }
         }
 
-        [Test]
-        public void ReadFields_CrlfOnly([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_CrlfOnly(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\r\n"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsTrue(parser.EndOfData);
-                Assert.IsNull(parser.ReadFields());
+                Assert.True(parser.EndOfData);
+                Assert.Null(parser.ReadFields());
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_QuoteOnly()
         {
             using (var parser = CreateParser("\""))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_SampleWithQuotedCommas()
         {
             using (var parser = CreateParser(@"1,test,""a,test"",2"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
 
                 var actual = parser.ReadFields();
-                CollectionAssert.AreEqual(
+                Assert.Equal(
                     expected: new[] { "1", "test", "a,test", "2" },
                     actual: actual
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SampleWithQuotedNewlines([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SampleWithQuotedNewlines(bool trimWhiteSpace)
         {
             using (var parser = CreateParser($"\"newline{Environment.NewLine}test\",2\nsecond line,3"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { $"newline{Environment.NewLine}test", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { $"second line", "3" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_SampleWithQuotedQuotes()
         {
             using (var parser = CreateParser($"\"a \"\"quote\"\" test\",2\n\"\"\"completely quoted\"\"\",3"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { $"a \"quote\" test", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { $"\"completely quoted\"", "3" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_BrokenQuotes()
         {
             using (var parser = CreateParser("\"te\"st"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_BrokenQuotesThenValidLine()
         {
             using (var parser = CreateParser("\"te\"st\n2,22"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "2", "22" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_QuoteInMiddleOfField()
         {
             using (var parser = CreateParser("te\"st"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "te\"st" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_QuoteInMiddleOfField_ThenNewlineQuotedField()
         {
             using (var parser = CreateParser("te\"st,\"t\ne\rs\r\nt\""))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "te\"st", "t\ne\rs\r\nt" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_RandomSample_QuotedTwoConsecutiveCr([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_RandomSample_QuotedTwoConsecutiveCr(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"\r\r2,,\"\n"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
 
                 if (trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                        expected: new[] { $"2,," },
                        actual: parser.ReadFields()
                     );
                 }
                 else if (CompatibilityMode)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                        expected: new[] { $"\r2,," },
                        actual: parser.ReadFields()
                     );
                 }
                 else
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                        expected: new[] { $"\r\r2,," },
                        actual: parser.ReadFields()
                     );
                 }
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_QuotedTwoConsecutiveEOL([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_QuotedTwoConsecutiveEOL(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\r\n\r\n2\""))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: CompatibilityMode ? new[] { $"2\r\n2" } : new[] { $"2\r\n\r\n2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_QuotedManyConsecutiveEOL([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_QuotedManyConsecutiveEOL(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\r\n\r\n\r\r\n\n\n\r\n2\""))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: CompatibilityMode ? new[] { $"2\r\n2" } : new[] { $"2\r\n\r\n\r\r\n\n\n\r\n2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_SampleWithQuotedNewLineFieldsAndNormalFields()
         {
             using (var parser = CreateParser($"\"quoted \r\n\",test,1\r\n2,\"quoted \r\n\",3\r\n4,5,\"quoted \r\n\"\r\n\r\n,6,7,8"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "quoted \r\n", "test", "1" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "2", "quoted \r\n", "3" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "4", "5", "quoted \r\n" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "", "6", "7", "8" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_RandomSample_TabsAndCr()
         {
             using (var parser = CreateParser(",gc\t\r\n\t\",d\t\tb\rc\"\rd g\"\n\r"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "", "gc\t", },
                     actual: parser.ReadFields()
                 );
 
                 if (CompatibilityMode)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { ",d\t\tb\rc", },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "d g\"", },
                         actual: parser.ReadFields()
                     );
                 }
                 else
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "\t\"", "d\t\tb", },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "c\"", },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "d g\"", },
                         actual: parser.ReadFields()
                     );
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceBeforeQuote([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceBeforeQuote(bool trimWhiteSpace)
         {
             using (var parser = CreateParser(" \"2,2\""))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: CompatibilityMode || trimWhiteSpace ? new[] { "2,2" } : new[] { " \"2", "2\"" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_RandomSample_SpaceAfterEndQuote()
         {
             using (var parser = CreateParser("\"\rbhaedbded\ra, h\r\" "))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "\rbhaedbded\ra, h\r", "" },
                         actual: parser.ReadFields()
                     );
@@ -590,21 +610,23 @@ namespace NotVisualBasic.FileIO
                 {
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceAfterEndQuote(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" "))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "2", "" },
                         actual: parser.ReadFields()
                     );
@@ -613,21 +635,23 @@ namespace NotVisualBasic.FileIO
                 {
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceAfterEndQuoteThenAnotherField([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceAfterEndQuoteThenAnotherField(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" ,3"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "2", "3" },
                         actual: parser.ReadFields()
                     );
@@ -636,21 +660,23 @@ namespace NotVisualBasic.FileIO
                 {
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceAfterEndQuoteThenAnotherLine([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceAfterEndQuoteThenAnotherLine(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \n3"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "2" },
                         actual: parser.ReadFields()
                     );
@@ -660,27 +686,29 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "3" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_MultipleSpacesAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_MultipleSpacesAfterEndQuote(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \t    \t   "))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "2", "" },
                         actual: parser.ReadFields()
                     );
@@ -690,22 +718,24 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_MultipleSpacesAfterEndQuote_CustomDelimiter([Values(true, false)] bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_MultipleSpacesAfterEndQuote_CustomDelimiter(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"2\" \t    \t   "))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
                 parser.SetDelimiter('|');
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "2", "" },
                         actual: parser.ReadFields()
                     );
@@ -715,75 +745,75 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_RandomSample_SpaceBeforeStartQuote_TabAndCharAfterEndQuote()
         {
             using (var parser = CreateParser("edf\r\n \"	 \n,f\n\r\"\rfa,\"f\" 	c\n"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "edf" },
                     actual: parser.ReadFields()
                 );
 
                 if (CompatibilityMode)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "\t \n,f\n" },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
+                    Assert.False(parser.EndOfData);
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
                 else
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { " \"\t " },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
-                    CollectionAssert.AreEqual(
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
                         expected: new[] { "", "f" },
                         actual: parser.ReadFields()
                     );
 
-                    Assert.IsFalse(parser.EndOfData);
+                    Assert.False(parser.EndOfData);
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_RandomSample_TabAndCharAfterEndQuote()
         {
             using (var parser = CreateParser("\"f\" 	c"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_RandomSample_SpaceAndNewlinesAfterEndQuote()
         {
             using (var parser = CreateParser("eb\"b\tg,ag\"g\"dh\"\"hahb\tc\"\tagcb,\"ba\tdb\rfe\t\ng\t,b\" \r\ne \n"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "eb\"b\tg", "ag\"g\"dh\"\"hahb\tc\"\tagcb", "ba\tdb\rfe\t\ng\t,b" },
                         actual: parser.ReadFields()
                     );
@@ -793,27 +823,29 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "e " },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
-        public void ReadFields_SpaceAndNewlinesAfterEndQuote([Values(true, false)]bool trimWhiteSpace)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SpaceAndNewlinesAfterEndQuote(bool trimWhiteSpace)
         {
             using (var parser = CreateParser("\"a\" \r\n"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 if (CompatibilityMode || trimWhiteSpace)
                 {
-                    CollectionAssert.AreEqual(
+                    Assert.Equal(
                         expected: new[] { "a" },
                         actual: parser.ReadFields()
                     );
@@ -823,22 +855,22 @@ namespace NotVisualBasic.FileIO
                     Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
                 }
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_BrokenQuotesSample()
         {
             using (var parser = CreateParser(@"""a""""b"""",""""c ""d"" e""""f"",""1"",""2, 3"",""4, 5"","""","""",""6"",""7"",""8"",""9"",""0"""))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ReadFields_SampleWithTabDelimiterAndTrimWhiteSpace()
         {
             using (var parser = CreateParser(@"a		""\,
@@ -856,59 +888,61 @@ a#
             {
                 parser.SetDelimiter('\t');
                 parser.TrimWhiteSpace = true;
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "a", "", "\\,\r\n2a,\\,,,'\r\na# \r\n22#' '\\/\\\t,a/ /'# 2\r\n \\,2/\"\r\n22# \t\\ \t,/" },
                     actual: parser.ReadFields()
                 );
             }
         }
 
-        [TestCase(',')]
-        [TestCase('|')]
-        [TestCase('\t')]
+        [Theory]
+        [InlineData(',')]
+        [InlineData('|')]
+        [InlineData('\t')]
         public void SetDelimiter_ReadFields_Sample(char delimiterChar)
         {
             using (var parser = CreateParser($@"1{delimiterChar}2{delimiterChar}3{Environment.NewLine}4{delimiterChar}5"))
             {
                 parser.SetDelimiter(delimiterChar);
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "2", "3" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "4", "5" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [TestCase(',')]
-        [TestCase('|')]
-        [TestCase('\t')]
+        [Theory]
+        [InlineData(',')]
+        [InlineData('|')]
+        [InlineData('\t')]
         public void SetDelimiter_ReadFields_SampleWithQuotedDelimiters(char delimiterChar)
         {
             using (var parser = CreateParser($@"1{delimiterChar}test{delimiterChar}""a{delimiterChar}test""{delimiterChar}2"))
             {
                 parser.SetDelimiter(delimiterChar);
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "test", $"a{delimiterChar}test", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_EmptyString()
         {
             using (var parser = CreateParser("test"))
@@ -917,7 +951,7 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_NullDelimiter()
         {
             using (var parser = CreateParser("test"))
@@ -926,7 +960,7 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_NewLine()
         {
             using (var parser = CreateParser("test"))
@@ -935,7 +969,7 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_CarriageReturn()
         {
             using (var parser = CreateParser("test"))
@@ -944,7 +978,7 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiter_NewLine()
         {
             using (var parser = CreateParser("test"))
@@ -953,7 +987,7 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiter_CarriageReturn()
         {
             using (var parser = CreateParser("test"))
@@ -962,292 +996,304 @@ a#
             }
         }
 
-        [Test]
+        [Fact]
         public void ErrorLine_BrokenQuotesThenValidLine()
         {
             using (var parser = CreateParser("\"te\"st\n2,22"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 var ex = Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.AreEqual("\"te\"st", parser.ErrorLine);
-                Assert.AreEqual(1, parser.ErrorLineNumber);
+                Assert.Equal("\"te\"st", parser.ErrorLine);
+                Assert.Equal(1, parser.ErrorLineNumber);
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "2", "22" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.AreEqual("\"te\"st", parser.ErrorLine);
-                Assert.AreEqual(1, parser.ErrorLineNumber);
+                Assert.Equal("\"te\"st", parser.ErrorLine);
+                Assert.Equal(1, parser.ErrorLineNumber);
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ErrorLine_QuoteNeverClosed_MultipleLinesInErrorField()
         {
             using (var parser = CreateParser("1\n\"2,22\n3\r\n4"))
             {
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 var ex = Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.AreEqual("\"2,22\n3\r\n4", parser.ErrorLine);
-                Assert.AreEqual(2, parser.ErrorLineNumber);
+                Assert.Equal("\"2,22\n3\r\n4", parser.ErrorLine);
+                Assert.Equal(2, parser.ErrorLineNumber);
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void ErrorLine_MaybeResetAfterClose()
         {
             ITextFieldParser parser;
             using (parser = CreateParser("\"te\"st"))
             {
-                Assert.IsFalse(parser.EndOfData);
+                Assert.False(parser.EndOfData);
                 var ex = Assert.Throws<CsvMalformedLineException>(() => parser.ReadFields());
-                Assert.AreEqual("\"te\"st", parser.ErrorLine);
-                Assert.AreEqual(1, parser.ErrorLineNumber);
+                Assert.Equal("\"te\"st", parser.ErrorLine);
+                Assert.Equal(1, parser.ErrorLineNumber);
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
 
             if (CompatibilityMode)
             {
-                Assert.AreEqual("\"te\"st", parser.ErrorLine);
-                Assert.AreEqual(1, parser.ErrorLineNumber);
+                Assert.Equal("\"te\"st", parser.ErrorLine);
+                Assert.Equal(1, parser.ErrorLineNumber);
             }
             else
             {
-                Assert.AreEqual(string.Empty, parser.ErrorLine);
-                Assert.AreEqual(-1L, parser.ErrorLineNumber);
+                Assert.Equal(string.Empty, parser.ErrorLine);
+                Assert.Equal(-1L, parser.ErrorLineNumber);
             }
         }
 
-        [Test]
-        public void LineNumber_SingleValue([Values(true, false)]bool checkEndOfData)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void LineNumber_SingleValue(bool checkEndOfData)
         {
             using (var parser = CreateParser("1"))
             {
-                Assert.AreEqual(1, parser.LineNumber);
+                Assert.Equal(1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(1, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
             }
         }
 
-        [Test]
-        public void LineNumber_TwoRows_TwoValues([Values(true, false)]bool checkEndOfData)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void LineNumber_TwoRows_TwoValues(bool checkEndOfData)
         {
             using (var parser = CreateParser($"1,2{Environment.NewLine}3,4"))
             {
-                Assert.AreEqual(1, parser.LineNumber);
+                Assert.Equal(1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(1, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(2, parser.LineNumber);
+                Assert.Equal(2, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(2, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(2, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
             }
         }
 
-        [Test]
-        public void LineNumber_SampleWithQuotedNewlines([Values(true, false)]bool trimWhiteSpace, [Values(true, false)]bool checkEndOfData)
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(false, false)]
+        public void LineNumber_SampleWithQuotedNewlines(bool trimWhiteSpace, bool checkEndOfData)
         {
             using (var parser = CreateParser($"\"newline{Environment.NewLine}test\",2\nsecond line,3\n\"third\rline\n\r\n\n\",4"))
             {
                 parser.TrimWhiteSpace = trimWhiteSpace;
 
-                Assert.AreEqual(1, parser.LineNumber);
+                Assert.Equal(1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(1, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(3, parser.LineNumber);
+                Assert.Equal(3, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(3, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(3, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(4, parser.LineNumber);
+                Assert.Equal(4, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(4, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(4, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
             }
         }
 
-        [Test]
-        public void LineNumber_SampleWithBlankLine([Values(true, false)]bool checkEndOfData)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void LineNumber_SampleWithBlankLine(bool checkEndOfData)
         {
             using (var parser = CreateParser($"1,2\n3,4\n\n5,6\n7"))
             {
-                Assert.AreEqual(1, parser.LineNumber);
+                Assert.Equal(1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(1, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(2, parser.LineNumber);
+                Assert.Equal(2, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(2, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(2, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(3, parser.LineNumber);
+                Assert.Equal(3, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(3, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(3, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(5, parser.LineNumber);
+                Assert.Equal(5, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(5, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(5, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
             }
         }
 
-        [Test]
-        public void LineNumber_SampleWithTrailingBlankLines([Values(true, false)]bool checkEndOfData)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void LineNumber_SampleWithTrailingBlankLines(bool checkEndOfData)
         {
             using (var parser = CreateParser(",2,3\n,9\n\n\n"))
             {
-                Assert.AreEqual(1, parser.LineNumber);
+                Assert.Equal(1, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(1, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(1, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(2, parser.LineNumber);
+                Assert.Equal(2, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsFalse(parser.EndOfData);
-                    Assert.AreEqual(2, parser.LineNumber);
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(2, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(3, parser.LineNumber);
+                Assert.Equal(3, parser.LineNumber);
 
                 if (checkEndOfData)
                 {
-                    Assert.IsTrue(parser.EndOfData);
-                    Assert.AreEqual(3, parser.LineNumber);
+                    Assert.True(parser.EndOfData);
+                    Assert.Equal(3, parser.LineNumber);
                 }
 
                 parser.ReadFields();
-                Assert.AreEqual(-1, parser.LineNumber);
+                Assert.Equal(-1, parser.LineNumber);
 
                 for (var i = 0; i < 10; i++)
                 {
                     if (checkEndOfData)
                     {
-                        Assert.IsTrue(parser.EndOfData);
-                        Assert.AreEqual(-1, parser.LineNumber);
+                        Assert.True(parser.EndOfData);
+                        Assert.Equal(-1, parser.LineNumber);
                     }
 
                     parser.ReadFields();
-                    Assert.AreEqual(-1, parser.LineNumber);
+                    Assert.Equal(-1, parser.LineNumber);
                 }
             }
         }

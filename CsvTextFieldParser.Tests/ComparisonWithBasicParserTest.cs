@@ -1,19 +1,20 @@
-﻿using NUnit.Framework;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Xunit;
 
 namespace NotVisualBasic.FileIO
 {
     public class ComparisonWithBasicParserTest
     {
-        [TestCase("1234567890,\n", 100)]
-        [TestCase("1234567890,\n\"", 100)]
-        [TestCase("2,\n\r", 100)]
-        [TestCase("abcdefgh,\n\r\t ", 100)]
-        [TestCase("abcdefgh,\"\n\r\t ", 100)]
-        [TestCase("a2/\\#,\"'\n\r\t ", 100)]
+        [Theory]
+        [InlineData("1234567890,\n", 100)]
+        [InlineData("1234567890,\n\"", 100)]
+        [InlineData("2,\n\r", 100)]
+        [InlineData("abcdefgh,\n\r\t ", 100)]
+        [InlineData("abcdefgh,\"\n\r\t ", 100)]
+        [InlineData("a2/\\#,\"'\n\r\t ", 100)]
         public void RandomInput(string inputCharsString, int iterations, int seed = 0)
         {
             var inputChars = inputCharsString.ToArray();
@@ -25,7 +26,7 @@ namespace NotVisualBasic.FileIO
 
                 var expected = ParseBasicCsv(input).ToList();
                 var actual = ParseFancyCsv(input).ToList();
-                CollectionAssert.AreEqual(expected, actual);
+                Assert.Equal(expected, actual);
             }
         }
 
