@@ -1,0 +1,53 @@
+name: .NET
+
+on:
+  push:
+  pull_request:
+  release:
+    types:
+      - published
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: '5.0.x'
+      - name: Restore
+        run: dotnet restore
+      - name: Build
+        run: dotnet build -c Release --no-restore
+      - name: Test
+        run: dotnet test --no-build
+      - name: Pack
+        if: matrix.os == 'windows-latest' && github.event_name == 'release'
+        run: |
+          arrTag=(${GITHUB_REF//\// })
+          VERSION="${arrTag[2]}"
+          VERSION="${VERSION//v}"
+          echo Version: $VERSION
+          dotnet pack -c Release -p:Version=$Version -p:PackageVersion=$VERSION -p:AssemblyVersion=$Version -p:FileVersion=$Version -p:InformationalVersion=$Version -o nupkg src/CsvTextFieldParser/CsvTextFieldParser.csproj
+      - name: Upload Artifact Nupkg
+        if: matrix.os == 'windows-latest' && github.event_name == 'release'
+        uses: actions/upload-artifact@v2
+        with:
+          name: nupkg
+          path: ./CsvTextFieldParser/bin/Release/*.nupkg
+      - name: Upload Artifact Bin
+        if: matrix.os == 'windows-latest' && github.event_name == 'release'
+        uses: actions/upload-artifact@v2
+        with:
+          name: bin
+          path: ./CsvTextFieldParser/bin/Release/netstandard2.0/*.*
+
