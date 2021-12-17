@@ -1,6 +1,6 @@
-﻿using NUnit.Framework;
-using System;
+﻿using System;
 using System.IO;
+using Xunit;
 
 namespace NotVisualBasic.FileIO
 {
@@ -8,42 +8,43 @@ namespace NotVisualBasic.FileIO
     {
         private CsvTextFieldParser CreateParser(string input) => new CsvTextFieldParser(new StringReader(input));
 
-        [Test]
+        [Fact]
         public void SetQuoteCharacterToSingleQuote()
         {
             using (var parser = CreateParser($@"1,"""","""",'a,test','a,''test''',2"))
             {
                 parser.SetQuoteCharacter('\'');
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", @"""""", @"""""", @"a,test", @"a,'test'", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void SetQuoteEscapeCharacterToBackslash()
         {
             using (var parser = CreateParser($@"1,"""","""",""a,\""test\"""",2"))
             {
                 parser.SetQuoteEscapeCharacter('\\');
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", "", "", @"a,""test""", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void SetQuoteCharacterToSingleQuote_And_SetQuoteEscapeCharacterToBackslash(bool isSetEscapeCharFirst)
         {
             using (var parser = CreateParser($@"1,""a,test"",'a,\'test\'',2"))
@@ -60,17 +61,17 @@ namespace NotVisualBasic.FileIO
                     parser.SetQuoteEscapeCharacter('\\');
                 }
 
-                Assert.IsFalse(parser.EndOfData);
-                CollectionAssert.AreEqual(
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
                     expected: new[] { "1", @"""a", @"test""", "a,'test'", "2" },
                     actual: parser.ReadFields()
                 );
 
-                Assert.IsTrue(parser.EndOfData);
+                Assert.True(parser.EndOfData);
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_Empty()
         {
             using (var parser = CreateParser("test"))
@@ -79,7 +80,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_Null()
         {
             using (var parser = CreateParser("test"))
@@ -88,7 +89,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_TwoDelimiters()
         {
             using (var parser = CreateParser("test"))
@@ -97,7 +98,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetDelimiters_TwoCharacterDelimiter()
         {
             using (var parser = CreateParser("test"))
@@ -106,7 +107,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetQuoteCharacter_NewLine()
         {
             using (var parser = CreateParser("test"))
@@ -115,7 +116,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetQuoteCharacter_CarriageReturn()
         {
             using (var parser = CreateParser("test"))
@@ -124,7 +125,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetQuoteEscapeCharacter_NewLine()
         {
             using (var parser = CreateParser("test"))
@@ -133,7 +134,7 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Test]
+        [Fact]
         public void SetQuoteEscapeCharacter_CarriageReturn()
         {
             using (var parser = CreateParser("test"))

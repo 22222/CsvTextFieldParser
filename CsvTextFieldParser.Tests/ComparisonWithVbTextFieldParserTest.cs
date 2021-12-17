@@ -1,17 +1,18 @@
 ﻿using Microsoft.VisualBasic.FileIO;
-using NUnit.Framework;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Xunit;
 
 namespace NotVisualBasic.FileIO
 {
     public class ComparisonWithVbTextFieldParserTest
     {
-        [Test]
+        [Theory]
+        [CombinatorialData]
         public void RandomInput(
-            [Values(
+            [CombinatorialValues(
                 "1234567890,\n",
                 "1234567890,\n\"",
                 "2,\n\r\"",
@@ -19,17 +20,18 @@ namespace NotVisualBasic.FileIO
                 "a2/\\#,\"'\n\r\t "
             )]
             string inputCharsString,
-            [Values(true, false)] bool trimWhiteSpace,
-            [Values(true, false)] bool hasFieldsEnclosedInQuotes,
-            [Values(',', '|')] char delimiter
+            [CombinatorialValues(true, false)] bool trimWhiteSpace,
+            [CombinatorialValues(true, false)] bool hasFieldsEnclosedInQuotes,
+            [CombinatorialValues(',', '|')] char delimiter
         )
         {
-            RandomInput(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) => delimiter);
+            RandomInputImpl(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) => delimiter);
         }
 
-        [Test]
+        [Theory]
+        [CombinatorialData]
         public void RandomInput_RandomDelimiter(
-           [Values(
+           [CombinatorialValues(
                 "1234567890,\n",
                 "1234567890,\n\"",
                 "2,\n\r\"",
@@ -37,11 +39,11 @@ namespace NotVisualBasic.FileIO
                 "a2/\\#,\"'\n\r\t "
             )]
             string inputCharsString,
-           [Values(true, false)] bool trimWhiteSpace,
-           [Values(true, false)] bool hasFieldsEnclosedInQuotes
+           [CombinatorialValues(true, false)] bool trimWhiteSpace,
+           [CombinatorialValues(true, false)] bool hasFieldsEnclosedInQuotes
         )
         {
-            RandomInput(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) =>
+            RandomInputImpl(inputCharsString, trimWhiteSpace, hasFieldsEnclosedInQuotes, (random) =>
             {
                 var delimiterChars = inputCharsString.Except(new[] { '\r', '\n', '"' }).ToArray();
                 var delimiter = delimiterChars[random.Next(0, delimiterChars.Length)];
@@ -49,7 +51,7 @@ namespace NotVisualBasic.FileIO
             });
         }
 
-        private void RandomInput(string inputCharsString, bool trimWhiteSpace, bool hasFieldsEnclosedInQuotes, Func<Random, char> chooseDelimiter)
+        private void RandomInputImpl(string inputCharsString, bool trimWhiteSpace, bool hasFieldsEnclosedInQuotes, Func<Random, char> chooseDelimiter)
         {
             // Using a hardcoded seed so our "random" tests are deterministic.
             const int seed = 0;
@@ -81,11 +83,11 @@ namespace NotVisualBasic.FileIO
                         bool actualEndOfData = actualParser.EndOfData;
                         bool expectedEndOfData = expectedParser.EndOfData;
                         endOfData = actualEndOfData || expectedEndOfData;
-                        Assert.AreEqual(expectedEndOfData, actualEndOfData, $"EndOfData mismatch on iteration {i} with delimiter \"{delimiter}\" logical line {logicalLineCounter} for input: {input}");
+                        CustomAssert.Equal(expectedEndOfData, actualEndOfData, $"EndOfData mismatch on iteration {i} with delimiter \"{delimiter}\" logical line {logicalLineCounter} for input: {input}");
 
                         var actualLineNumber = actualParser.LineNumber;
                         var expectedLineNumber = expectedParser.LineNumber;
-                        Assert.AreEqual(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
+                        CustomAssert.Equal(expectedLineNumber, actualLineNumber, $"LineNumber mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for before fields: {string.Join(",", previousFields ?? Array.Empty<string>())}");
 
                         string[] actualFields;
                         CsvMalformedLineException actualException = null;
@@ -115,14 +117,14 @@ namespace NotVisualBasic.FileIO
 
                         if (expectedException != null || actualException != null)
                         {
-                            Assert.IsNotNull(expectedException, $"Expected no exception but was {actualException?.GetType().Name} on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
-                            Assert.IsNotNull(actualException, $"Expected {expectedException?.GetType().Name} but was no exception on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
-                            Assert.AreEqual(expectedParser.ErrorLine, actualParser.ErrorLine, $"ErrorLine mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
+                            CustomAssert.NotNull(expectedException, $"Expected no exception but was {actualException?.GetType().Name} on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
+                            CustomAssert.NotNull(actualException, $"Expected {expectedException?.GetType().Name} but was no exception on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
+                            CustomAssert.Equal(expectedParser.ErrorLine, actualParser.ErrorLine, $"ErrorLine mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter}");
 
                             // Who know what they're doing for their line numbers.  It doesn't really matter if we exactly match probably?
-                            //Assert.AreEqual(expectedParser.ErrorLineNumber, actualParser.ErrorLineNumber, $"ErrorLineNumber mismatch on iteration {i} on line {logicalLineCounter}");
+                            //Assert.Equal(expectedParser.ErrorLineNumber, actualParser.ErrorLineNumber, $"ErrorLineNumber mismatch on iteration {i} on line {logicalLineCounter}");
                         }
-                        CollectionAssert.AreEqual(expectedFields, actualFields, $"ReadFields mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for input: {input}");
+                        CustomAssert.Equal(expectedFields, actualFields, $"ReadFields mismatch on iteration {i} with delimiter \"{delimiter}\" on logical line {logicalLineCounter} for input: {input}");
                     } while (!endOfData);
                 }
             }
@@ -146,7 +148,7 @@ namespace NotVisualBasic.FileIO
             return parser;
         }
 
-        [Test]
+        [Fact]
         public void ReadLine_Sample()
         {
             const string input = @"Name,Birth Date
@@ -158,16 +160,16 @@ Ivan Drago,1961-11-03";
             var vbParser = new Microsoft.VisualBasic.FileIO.TextFieldParser(new StringReader(input));
             vbParser.SetDelimiters(",");
 
-            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
-            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
-            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
-            Assert.IsNull(vbParser.ReadFields());
-            Assert.IsNull(parser.ReadFields());
-            Assert.IsTrue(vbParser.EndOfData);
-            Assert.IsTrue(parser.EndOfData);
+            Assert.Equal(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.Equal(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.Equal(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.Null(vbParser.ReadFields());
+            Assert.Null(parser.ReadFields());
+            Assert.True(vbParser.EndOfData);
+            Assert.True(parser.EndOfData);
         }
 
-        [Test]
+        [Fact]
         public void ReadLine_SampleWithNewlineInQuotedField()
         {
             const string input = @"Name,Birth Date
@@ -181,19 +183,19 @@ Drago"",1961-11-03
             var vbParser = new Microsoft.VisualBasic.FileIO.TextFieldParser(new StringReader(input));
             vbParser.SetDelimiters(",");
 
-            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
-            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
-            Assert.AreEqual(vbParser.ReadLine(), parserReader.ReadLine());
+            Assert.Equal(vbParser.ReadFields(), parser.ReadFields());
+            Assert.Equal(vbParser.ReadFields(), parser.ReadFields());
+            Assert.Equal(vbParser.ReadLine(), parserReader.ReadLine());
 
             // The readline should have read into the middle of the field, which changes the parsing output
-            CollectionAssert.AreEqual(new[] { @"Drago""", "1961-11-03" }, vbParser.ReadFields());
-            CollectionAssert.AreEqual(new[] { @"Drago""", "1961-11-03" }, parser.ReadFields());
+            Assert.Equal(new[] { @"Drago""", "1961-11-03" }, vbParser.ReadFields());
+            Assert.Equal(new[] { @"Drago""", "1961-11-03" }, parser.ReadFields());
 
-            CollectionAssert.AreEqual(vbParser.ReadFields(), parser.ReadFields());
-            Assert.IsNull(vbParser.ReadFields());
-            Assert.IsNull(parser.ReadFields());
-            Assert.IsTrue(vbParser.EndOfData);
-            Assert.IsTrue(parser.EndOfData);
+            Assert.Equal(vbParser.ReadFields(), parser.ReadFields());
+            Assert.Null(vbParser.ReadFields());
+            Assert.Null(parser.ReadFields());
+            Assert.True(vbParser.EndOfData);
+            Assert.True(parser.EndOfData);
         }
     }
 }
