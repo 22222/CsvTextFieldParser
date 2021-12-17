@@ -52,7 +52,7 @@ namespace NotVisualBasic.FileIO
             {
                 parser.Delimiters = new string[0];
                 var actual = parser.Delimiters;
-                Assert.Equal(0, actual.Length);
+                Assert.Empty(actual);
             }
         }
 
