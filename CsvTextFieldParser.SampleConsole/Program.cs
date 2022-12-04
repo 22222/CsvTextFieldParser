@@ -66,6 +66,14 @@ Drago"",1961-11-03
 
             CreateWithCompatibilityMode(new StringReader(""));
             CreateWithConfigurationOptions(new StringReader(""));
+
+            Console.WriteLine("Formatter sample:");
+            Console.WriteLine(FormatSample());
+
+            Console.WriteLine();
+            Console.WriteLine();
+
+            CreateFormatterWithConfigurationOptions(new StringWriter());
         }
 
         public static IEnumerable<string[]> ParseBasicCsv(string input)
@@ -266,6 +274,31 @@ Drago"",1961-11-03
                     yield return line;
                 }
             }
+        }
+
+        public static string FormatSample()
+        {
+            string csv;
+            using (var csvWriter = new StringWriter())
+            using (var formatter = new NotVisualBasic.FileIO.CsvTextFieldFormatter(csvWriter))
+            {
+                formatter.WriteFields(new string[] { "Name", "Birth Date" });
+                formatter.WriteFields(new string[] { "Creed, Apollo", "1942-08-17" });
+                formatter.WriteFields(new string[] { "Ivan Drago", "1961-11-03" });
+                formatter.WriteFields(new string[] { "Robert \"Rocky\" Balboa", "1945-07-06" });
+                csv = csvWriter.ToString();
+            }
+            return csv;
+        }
+
+        public static void CreateFormatterWithConfigurationOptions(TextWriter csvWriter)
+        {
+            var formatter = new NotVisualBasic.FileIO.CsvTextFieldFormatter(csvWriter);
+            formatter.SetDelimiter('|');
+            formatter.Delimiters = new[] { "|" };
+            formatter.SetQuoteCharacter('\'');
+            formatter.SetQuoteEscapeCharacter('\\');
+            formatter.SetEndOfLine("\n");
         }
     }
 
