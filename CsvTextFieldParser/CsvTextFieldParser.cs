@@ -11,12 +11,11 @@ namespace NotVisualBasic.FileIO
     /// Parses comma-delimited text files.
     /// </summary>
     /// <remarks>
-    /// Based on <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
+    /// Designed for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
     /// </remarks>
     public class CsvTextFieldParser : IDisposable
     {
         private TextReader reader;
-        private readonly bool leaveOpen = false;
         private string peekedLine = null;
         private int peekedEmptyLineCount = 0;
         private long lineNumber = 0;
@@ -47,10 +46,7 @@ namespace NotVisualBasic.FileIO
         /// Constructs a parser from the specified input stream with the specified encoding and byte order mark detection option, and optionally leaves the stream open.
         /// </summary>
         public CsvTextFieldParser(Stream stream, Encoding encoding, bool detectEncodingFromByteOrderMarks, bool leaveOpen)
-            : this(new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks))
-        {
-            this.leaveOpen = leaveOpen;
-        }
+            : this(new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks, 1024, leaveOpen)) { }
 
         /// <summary>
         /// Constructs a parser from the specified input file path.
@@ -413,10 +409,7 @@ namespace NotVisualBasic.FileIO
         {
             if (reader != null)
             {
-                if (!leaveOpen)
-                {
-                    reader.Close();
-                }
+                reader.Close();
                 reader = null;
             }
 

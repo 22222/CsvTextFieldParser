@@ -21,7 +21,7 @@ Getting Started
 ===============
 Using this library is almost exactly the same as using the VisualBasic `TextFieldParser` class.  Here's an example of using this library to parse CSV input into dictionaries:
 
-```c#
+```csharp
 public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeader(string csvInput)
 {
 	using (var csvReader = new StringReader(csvInput))
@@ -59,7 +59,7 @@ Ivan Drago,1961-11-03
 
 That's easy, it only takes a few lines of code:
 
-```c#
+```csharp
 public static IEnumerable<string[]> ParseBasicCsv(string input)
 {
 	using (var reader = new StringReader(input))
@@ -108,7 +108,7 @@ Drago",1961-11-03
 
 Now maybe it's time to consider a CSV library.  And what luck, the .NET standard library happens to have one built-in.  Here's your code now:
 
-```c#
+```csharp
 public static void ProcessCsv(string csvInput)
 {
 	using (var csvReader = new StringReader(csvInput))
@@ -139,7 +139,7 @@ And there's another problem.  The `Microsoft.VisualBasic` probably isn't in .NET
 
 One option is to use this one.  It's almost exactly the same as using the VisualBasic TextFieldParser:
 
-```c#
+```csharp
 public static void ProcessCsv(string csvInput)
 {
 	using (var csvReader = new StringReader(csvInput))
@@ -179,7 +179,7 @@ Getting information about these errors works just like handling `Microsoft.Visua
 
 Here's an example of using this parser with error handling:
 
-```c#
+```csharp
 public static IEnumerable<IDictionary<string, string>> ParseCsvWithHeaderIgnoreErrors(string csvInput)
 {
 	using (var csvReader = new StringReader(csvInput))
@@ -239,7 +239,7 @@ The configuration options available in this library are mostly based on the ones
 
 Here's an example of setting each of those options:
 
-```c#
+```csharp
 var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
 parser.SetDelimiter('|');
 parser.Delimiters = new[] { "|" };
@@ -270,7 +270,50 @@ After the parser is created and configured, using this parser should be pretty m
 
 By default, this parser does not recreate those behaviors.  However, this parser does contain a compatibility mode to exactly match the VB parser for these cases.  The main reason this mode is included to make it possible to run unit tests that compare the results of this parser to the VB version.  But the mode is available to you as well if you need it:
 
-```c#
+```csharp
 var parser = new NotVisualBasic.FileIO.CsvTextFieldParser(csvReader);
 parser.CompatibilityMode = true;
+```
+
+Formatting
+==========
+This library also includes a `CsvTextFieldFormatter` class with an interface that's similar to the parser.  This isn't directly based on anything in the `Microsoft.VisualBasic` assembly, but it's provided as a way to get a CSV file back from the parser's output.
+
+Here's a basic example of using it:
+
+```csharp
+public static string FormatSample()
+{
+    string csv;
+    using (var csvWriter = new StringWriter())
+    using (var formatter = new NotVisualBasic.FileIO.CsvTextFieldFormatter(csvWriter))
+    {
+        formatter.WriteFields(new string[] { "Name", "Birth Date" });
+        formatter.WriteFields(new string[] { "Creed, Apollo", "1942-08-17" });
+        formatter.WriteFields(new string[] { "Ivan Drago", "1961-11-03" });
+        formatter.WriteFields(new string[] { "Robert \"Rocky\" Balboa", "1945-07-06" });
+        csv = csvWriter.ToString();
+    }
+    return csv;
+}
+```
+
+That would produce the following CSV string:
+
+```csv
+Name,Birth Date
+"Creed, Apollo",1942-08-17
+Ivan Drago,1961-11-03
+"Robert ""Rocky"" Balboa",1945-07-06
+```
+
+The configuration options for the formatter are similar to the parser, with options to specify the delimiter, quote character, quote escape character, and end-of-line character(s).  For example:
+
+```csharp
+var formatter = new NotVisualBasic.FileIO.CsvTextFieldFormatter(csvWriter);
+formatter.SetDelimiter('|');
+formatter.Delimiters = new[] { "|" };
+formatter.SetQuoteCharacter('\'');
+formatter.SetQuoteEscapeCharacter('\\');
+formatter.SetEndOfLine("\n");
 ```
