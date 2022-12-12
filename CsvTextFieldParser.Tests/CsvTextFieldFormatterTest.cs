@@ -109,17 +109,28 @@ namespace NotVisualBasic.FileIO
             }
         }
 
-        [Fact]
-        public void WriteFields_TwoRows_TwoValues()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void WriteFields_TwoRows_TwoValues(bool forceFieldsEnclosedInQuotes)
         {
             string csv;
             using (var formatter = CreateFormatter())
             {
+                formatter.ForceFieldsEnclosedInQuotes = forceFieldsEnclosedInQuotes;
                 formatter.WriteFields(new[] { "1", "2" });
                 formatter.WriteFields(new[] { "3", "4" });
                 csv = formatter.ToCsv();
             }
-            Assert.Equal("1,2\n3,4\n", csv);
+
+            if (forceFieldsEnclosedInQuotes)
+            {
+                Assert.Equal("\"1\",\"2\"\n\"3\",\"4\"\n", csv);
+            }
+            else
+            {
+                Assert.Equal("1,2\n3,4\n", csv);
+            }
 
             using (var parser = CreateParser(csv))
             {
