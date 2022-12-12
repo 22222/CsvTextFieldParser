@@ -11,7 +11,7 @@ namespace NotVisualBasic.FileIO
     /// Parses comma-delimited text files.
     /// </summary>
     /// <remarks>
-    /// Designed for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
+    /// Designed for compatibility with Microsoft.VisualBasic.FileIO.TextFieldParser.
     /// </remarks>
     public class CsvTextFieldParser : IDisposable
     {
@@ -477,8 +477,8 @@ namespace NotVisualBasic.FileIO
         #region Configuration
 
         /// <summary>
-        /// True if this parser should exactly reproduce the behavior of the <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>.
-        /// Defaults to <code>false</code>.
+        /// True if this parser should exactly reproduce the behavior of the Microsoft.VisualBasic.FileIO.TextFieldParser.
+        /// Defaults to false.
         /// </summary>
         public bool CompatibilityMode { get; set; } = false;
 
@@ -487,7 +487,7 @@ namespace NotVisualBasic.FileIO
         /// Default is a comma.
         /// </summary>
         /// <remarks>
-        /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>,
+        /// This is defined as an array of strings for compatibility with Microsoft.VisualBasic.FileIO.TextFieldParser,
         /// but this parser only supports one single-character delimiter.
         /// </remarks>
         /// <exception cref="ArgumentException">A delimiter value is set to a newline character, an empty string, or null.</exception>
@@ -572,13 +572,13 @@ namespace NotVisualBasic.FileIO
 
         /// <summary>
         /// Denotes whether fields are enclosed in quotation marks when a CSV file is being parsed.
-        /// Defaults to <code>true</code>.
+        /// Defaults to true.
         /// </summary>
         public bool HasFieldsEnclosedInQuotes { get; set; } = true;
 
         /// <summary>
         /// Indicates whether leading and trailing white space should be trimmed from field values.
-        /// Defaults to <code>false</code>.
+        /// Defaults to false.
         /// </summary>
         public bool TrimWhiteSpace { get; set; } = false;
 
@@ -589,7 +589,7 @@ namespace NotVisualBasic.FileIO
     /// An exception that is thrown when the <see cref="CsvTextFieldParser.ReadFields"/> method cannot parse a row using the specified format.
     /// </summary>
     /// <remarks>
-    /// Based on <code>Microsoft.VisualBasic.FileIO.MalformedLineException.MalformedLineException</code>.
+    /// Based on Microsoft.VisualBasic.FileIO.MalformedLineException.MalformedLineException.
     /// </remarks>
     public class CsvMalformedLineException : FormatException
     {

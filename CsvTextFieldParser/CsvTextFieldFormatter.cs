@@ -94,7 +94,7 @@ namespace NotVisualBasic.FileIO
 
         private void WriteField(string field)
         {
-            var isQuoteNecessary = field.IndexOfAny(SpecialChars) >= 0;
+            var isQuoteNecessary = ForceFieldsEnclosedInQuotes || field.IndexOfAny(SpecialChars) >= 0;
             if (isQuoteNecessary)
             {
                 writer.Write(quoteChar);
@@ -180,7 +180,7 @@ namespace NotVisualBasic.FileIO
         /// Default is a comma.
         /// </summary>
         /// <remarks>
-        /// This is defined as an array of strings for compatibility with <code>Microsoft.VisualBasic.FileIO.TextFieldParser</code>,
+        /// This is defined as an array of strings for compatibility with Microsoft.VisualBasic.FileIO.TextFieldParser,
         /// but this formatter only supports one single-character delimiter.
         /// </remarks>
         /// <exception cref="ArgumentException">A delimiter value is set to a newline character, an empty string, or null.</exception>
@@ -287,6 +287,13 @@ namespace NotVisualBasic.FileIO
             }
             this.eol = eol;
         }
+
+        /// <summary>
+        /// Set to true to force fields written by this CSV formatter to always be enclosed in quotation marks.
+        /// If false, fields will only be enclosed in quotation marks if they contain a special character (like the delimiter character or an end-of-line character).
+        /// Defaults to false.
+        /// </summary>
+        public bool ForceFieldsEnclosedInQuotes { get; set; }
 
         #endregion
     }
