@@ -358,6 +358,71 @@ namespace NotVisualBasic.FileIO
             }
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ReadFields_SampleWithLeadingAndTrailingWhitespace(bool trimWhiteSpace)
+        {
+            using (var parser = CreateParser($"a, b,c , d ,\" e\",\"f \",\" g \"{Environment.NewLine} h{Environment.NewLine}i {Environment.NewLine} j "))
+            {
+                parser.TrimWhiteSpace = trimWhiteSpace;
+
+                Assert.False(parser.EndOfData);
+                if (trimWhiteSpace)
+                {
+                    Assert.Equal(
+                        expected: new[] { "a", "b", "c", "d", "e", "f", "g" },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { "h" },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { "i" },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { "j" },
+                        actual: parser.ReadFields()
+                    );
+                }
+                else
+                {
+                    Assert.Equal(
+                        expected: new[] { "a", " b", "c ", " d ", " e", "f ", " g " },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { " h" },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { "i " },
+                        actual: parser.ReadFields()
+                    );
+
+                    Assert.False(parser.EndOfData);
+                    Assert.Equal(
+                        expected: new[] { " j " },
+                        actual: parser.ReadFields()
+                    );
+                }
+
+                Assert.True(parser.EndOfData);
+            }
+        }
+
         [Fact]
         public void ReadFields_BrokenQuotes()
         {
