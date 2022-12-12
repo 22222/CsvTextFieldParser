@@ -360,5 +360,49 @@ namespace NotVisualBasic.FileIO
                 Assert.True(parser.EndOfData);
             }
         }
+
+        [Fact]
+        public void WriteFields_SampleWithLeadingAndTrailingWhitespace()
+        {
+            string csv;
+            using (var formatter = CreateFormatter())
+            {
+                formatter.WriteFields(new[] { "a", " b", "c ", " d ", " e", "f ", " g " });
+                formatter.WriteFields(new[] { " h" });
+                formatter.WriteFields(new[] { "i " });
+                formatter.WriteFields(new[] { " j " });
+                csv = formatter.ToCsv();
+            }
+            Assert.Equal("a, b,c , d , e,f , g \n h\ni \n j \n", csv);
+
+            using (var parser = CreateParser(csv))
+            {
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
+                    expected: new[] { "a", " b", "c ", " d ", " e", "f ", " g " },
+                    actual: parser.ReadFields()
+                );
+
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
+                    expected: new[] { " h" },
+                    actual: parser.ReadFields()
+                );
+
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
+                    expected: new[] { "i " },
+                    actual: parser.ReadFields()
+                );
+
+                Assert.False(parser.EndOfData);
+                Assert.Equal(
+                    expected: new[] { " j " },
+                    actual: parser.ReadFields()
+                );
+
+                Assert.True(parser.EndOfData);
+            }
+        }
     }
 }
